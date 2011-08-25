@@ -1,0 +1,10 @@
+History.txt
+Manifest.txt
+README.txt
+Rakefile
+bin/availability_cacher
+lib/availability_cacher.rb
+ext/availability_cacher/availability_cacher.c
+ext/availability_cacher/extconf.rb
+ext/availability_cacher/mongo-c-driver.tar.gz
+test/test_availability_cacher.rb
