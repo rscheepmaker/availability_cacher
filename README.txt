@@ -1,10 +1,10 @@
 = AvailabilityCacher
 
-* FIX (url)
+http://www.ikdoe.nl
 
 == DESCRIPTION:
 
-FIX (describe your package)
+Allows quick generating of records in mongodb.
 
 == FEATURES/PROBLEMS:
 
