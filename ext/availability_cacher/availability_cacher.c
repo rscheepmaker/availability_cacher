@@ -96,9 +96,29 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         int   i;
         int   j;
 
-        if ( mongo_connect( conn, "127.0.0.1", 27017 ) ) {
-                printf( "failed to connect\n" );
+        VALUE v_host     = rb_cv_get( self, "@@host" );
+        VALUE v_username = rb_cv_get( self, "@@username" );
+        VALUE v_password = rb_cv_get( self, "@@password" );
+        VALUE v_database = rb_cv_get( self, "@@database" );
+
+        char *host     = StringValuePtr( v_host );
+        char *username = StringValuePtr( v_username );
+        char *password = StringValuePtr( v_password );
+        char *database = StringValuePtr( v_database );
+        int   port     = NUM2INT( rb_cv_get( self, "@@port" ) );
+
+        // connect
+        if ( mongo_connect( conn, host, port ) ) {
+                rb_raise( rb_eException, "failed to connect to %s:%i", host, port );
                 return Qfalse;
+        }
+
+        // authenticate
+        if ( strlen( username ) > 0 ) {
+                if ( mongo_cmd_authenticate( conn, database, username, password ) ) {
+                    rb_raise( rb_eException, "failed to authenticate to %s", database );
+                    return Qfalse;
+                }
         }
 
         // convert the parameters to appropriate c types
@@ -154,6 +174,6 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
 
 void Init_availability_cacher()
 {
-        VALUE m_availability_cacher = rb_define_module( "AvailabilityCacher" );
+        VALUE m_availability_cacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_singleton_method( m_availability_cacher, "create_cache", create_cache, 5 );
 }
