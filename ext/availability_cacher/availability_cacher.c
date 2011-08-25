@@ -133,6 +133,10 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                 return Qfalse;
         }
 
+        // TODO: we might want to do a bounds check here...
+        char dbname[128];
+        sprintf( dbname, "%s.availability_caches", database );
+
         // iterate over the dates
         time_t * date = ary_dates.first;
         for( i = 0; i < ary_dates.length; i++, date++ ) {
@@ -156,7 +160,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                         bson_append_int(     &obj, "rentable_id", int_rentable_id );
                         bson_append_int(     &obj, "days",        j + 1 );
                         bson_finish( &obj );
-                        mongo_insert( conn, "test.test", &obj );
+                        mongo_insert( conn, dbname, &obj );
                     }
                 }
             }
