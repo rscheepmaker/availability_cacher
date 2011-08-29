@@ -120,7 +120,11 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         bson_finish( &obj );
         mongo_remove( conn, dbname, &obj );
 
-        bson *objs[15000];
+        bson object[15000];
+        bson *object_p[15000];
+        for( i = 0; i < 15000; i++ ) {
+                object_p[i] = &object[i];
+        }
         int  num = 0;
 
         // iterate over the dates
@@ -139,7 +143,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                     // dont break out the loop but ignore periods ending on days we cant
                     // leave.
                     if ( !time_t_array_contains( next_date, ary_no_checkout ) ) {
-                        bson *b = objs[num++];
+                        bson *b = &object[num++];
                         bson_init(           b );
                         bson_append_new_oid( b, "_id" );
                         bson_append_time_t(  b, "start_date",  *date );
@@ -152,9 +156,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
             }
         }
 
-        mongo_insert_batch( conn, dbname, objs, num );
+        mongo_insert_batch( conn, dbname, object_p, num );
         for( i = 0; i < num; i++ ) {
-                bson_destroy( objs[i] );
+                bson_destroy( &object[i] );
         }
 
         // fee memory, clear connections
