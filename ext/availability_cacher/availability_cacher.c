@@ -120,6 +120,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         bson_finish( &obj );
         mongo_remove( conn, dbname, &obj );
 
+        bson *objs[15000];
+        int  num = 0;
+
         // iterate over the dates
         time_t * date = ary_dates.first;
         for( i = 0; i < ary_dates.length; i++, date++ ) {
@@ -136,17 +139,22 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                     // dont break out the loop but ignore periods ending on days we cant
                     // leave.
                     if ( !time_t_array_contains( next_date, ary_no_checkout ) ) {
-                        bson_init( &obj );
-                        bson_append_new_oid( &obj, "_id" );
-                        bson_append_time_t(  &obj, "start_date",  *date );
-                        bson_append_time_t(  &obj, "end_date",    *next_date );
-                        bson_append_int(     &obj, "rentable_id", int_rentable_id );
-                        bson_append_int(     &obj, "days",        j + 1 );
-                        bson_finish( &obj );
-                        mongo_insert( conn, dbname, &obj );
+                        bson *b = objs[num++];
+                        bson_init(           b );
+                        bson_append_new_oid( b, "_id" );
+                        bson_append_time_t(  b, "start_date",  *date );
+                        bson_append_time_t(  b, "end_date",    *next_date );
+                        bson_append_int(     b, "rentable_id", int_rentable_id );
+                        bson_append_int(     b, "days",        j + 1 );
+                        bson_finish(         b );
                     }
                 }
             }
+        }
+
+        mongo_insert_batch( conn, dbname, objs, num );
+        for( i = 0; i < num; i++ ) {
+                bson_destroy( objs[i] );
         }
 
         // fee memory, clear connections
