@@ -130,20 +130,15 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
 
         // destroy old records
         bson_init( &obj );
-        bson_append_int( &obj, "rentable_id", rentable_id );
+        bson_append_int( &obj, "rentable_id", int_rentable_id );
         bson_finish( &obj );
         mongo_remove( conn, dbname, &obj );
-
-        printf("no_arrive length %i\n", ary_no_arrive.length);
-        printf("no_arrive first time_t %i\n", *ary_no_arrive.first);
 
         // iterate over the dates
         time_t * date = ary_dates.first;
         for( i = 0; i < ary_dates.length; i++, date++ ) {
-            printf( "date %i\n", *date );
             // valid arrival date?
             if ( !time_t_array_contains( date, ary_no_stay ) && !time_t_array_contains( date, ary_no_arrive ) ) {
-                printf( "into inner loop\n" );
                 for( j = 0; (j < 30) && ((i + j) < ary_dates.length); j++ ) {
                     time_t *next_date  = date + j;
 
