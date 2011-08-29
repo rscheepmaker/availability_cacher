@@ -34,7 +34,7 @@ class AvailabilityCacher
     p options[:no_stay]
     p options[:no_arrive]
     p options[:no_checkout]
-    p options[:dates]
+    p dates
     create_cache_from_normalized_dates( options[:rentable_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates )
   end
 end
