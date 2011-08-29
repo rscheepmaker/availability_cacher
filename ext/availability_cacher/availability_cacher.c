@@ -134,13 +134,13 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         bson_finish( &obj );
         mongo_remove( conn, dbname, &obj );
 
-        printf("no_arrive length %i", ary_no_arrive.length);
-        printf("no_arrive first time_t %i", *ary_no_arrive.first);
+        printf("no_arrive length %i\n", ary_no_arrive.length);
+        printf("no_arrive first time_t %i\n", *ary_no_arrive.first);
 
         // iterate over the dates
         time_t * date = ary_dates.first;
         for( i = 0; i < ary_dates.length; i++, date++ ) {
-            printf( "date %i", *date );
+            printf( "date %i\n", *date );
             // valid arrival date?
             if ( !time_t_array_contains( date, ary_no_stay ) && !time_t_array_contains( date, ary_no_arrive ) ) {
                 for( j = 0; (j < 30) && ((i + j) < ary_dates.length); j++ ) {
