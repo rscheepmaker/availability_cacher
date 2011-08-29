@@ -59,19 +59,10 @@ static struct time_t_array convert_date_array( VALUE dates )
                 VALUE * date      = RARRAY_PTR( tmp );
                 int i             = 0;
 
-                ID mday           = rb_intern("mday");
-                ID month          = rb_intern("month");
-                ID year           = rb_intern("year");
+                ID to_i           = rb_intern("to_i");
 
                 for( i = 0; i < array.length; i++, date++ ) {
-                        struct tm t;
-                        t.tm_sec  = 0;
-                        t.tm_min  = 0;
-                        t.tm_hour = 0;
-                        t.tm_mday = NUM2INT( rb_funcall( *date, mday, 0 ) );
-                        t.tm_mon  = NUM2INT( rb_funcall( *date, month, 0 ) ) - 1;
-                        t.tm_year = NUM2INT( rb_funcall( *date, year, 0 ) ) - 1900;
-                        time_t time = mktime( &t );
+                        time_t time = (time_t) NUM2INT( rb_funcall( *date, to_i, 0 ) );
                         array.first[i] = time;
                 }
                 return array;
@@ -179,5 +170,5 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
 void Init_availability_cacher()
 {
         VALUE m_availability_cacher = rb_define_class( "AvailabilityCacher", rb_cObject );
-        rb_define_singleton_method( m_availability_cacher, "create_cache", create_cache, 5 );
+        rb_define_singleton_method( m_availability_cacher, "create_cache_from_normalized_dates", create_cache, 5 );
 }

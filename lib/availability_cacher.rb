@@ -19,4 +19,17 @@ class AvailabilityCacher
     @@password = result[:password]
     @@database = result[:database]
   end
+
+  def self.create_cache( from, till, options = {} )
+    return false if options[:rentable_id].blank?
+    return false if options[:no_stay].blank?
+    return false if options[:no_arrive].blank?
+    return false if options[:no_checkout].blank?
+    options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    dates = (from..till).to_a
+    dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    create_cache_from_normalized_dates( options[:rentable_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates )
+  end
 end
