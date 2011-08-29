@@ -128,6 +128,12 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         char dbname[128];
         sprintf( dbname, "%s.availability_caches", database );
 
+        // destroy old records
+        bson_init( &obj );
+        bson_append_int( &obj, "rentable_id", rentable_id );
+        bson_finish( &obj );
+        mongo_remove( conn, dbname, &obj );
+
         // iterate over the dates
         time_t * date = ary_dates.first;
         for( i = 0; i < ary_dates.length; i++, date++ ) {
