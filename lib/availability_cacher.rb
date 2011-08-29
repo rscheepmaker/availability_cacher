@@ -22,9 +22,9 @@ class AvailabilityCacher
 
   def self.create_cache( from, till, options = {} )
     return false if options[:rentable_id].blank?
-    return false if options[:no_stay].blank?
-    return false if options[:no_arrive].blank?
-    return false if options[:no_checkout].blank?
+    return false if options[:no_stay].nil?
+    return false if options[:no_arrive].nil?
+    return false if options[:no_checkout].nil?
     options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
