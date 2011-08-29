@@ -77,40 +77,25 @@ static inline void dispose_time_t_array( struct time_t_array array )
         free( array.first );
 }
 
+static void mongo_connection_free( void *p )
+{
+        mongo *conn = (mongo *) p;
+        mongo_destroy( conn );
+        free( conn );
+}
+
 /**
  * the actual heave lifting.
  */
 static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates )
 {
-        mongo conn[1];
+        // get the connection
+        mongo *conn;
+        Data_Get_Struct( self, mongo, conn );
+
         bson  obj;
         int   i;
         int   j;
-
-        VALUE v_host     = rb_cv_get( self, "@@host" );
-        VALUE v_username = rb_cv_get( self, "@@username" );
-        VALUE v_password = rb_cv_get( self, "@@password" );
-        VALUE v_database = rb_cv_get( self, "@@database" );
-
-        char *host     = StringValuePtr( v_host );
-        char *username = StringValuePtr( v_username );
-        char *password = StringValuePtr( v_password );
-        char *database = StringValuePtr( v_database );
-        int   port     = NUM2INT( rb_cv_get( self, "@@port" ) );
-
-        // connect
-        if ( mongo_connect( conn, host, port ) ) {
-                rb_raise( rb_eException, "failed to connect to %s:%i", host, port );
-                return Qfalse;
-        }
-
-        // authenticate
-        if ( strlen( username ) > 0 ) {
-                if ( mongo_cmd_authenticate( conn, database, username, password ) ) {
-                    rb_raise( rb_eException, "failed to authenticate to %s", database );
-                    return Qfalse;
-                }
-        }
 
         // convert the parameters to appropriate c types
         struct time_t_array ary_dates       = convert_date_array( dates );
@@ -125,8 +110,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         }
 
         // TODO: we might want to do a bounds check here...
+        VALUE database = rb_iv_get( self, "@database" );
         char dbname[128];
-        sprintf( dbname, "%s.availability_caches", database );
+        sprintf( dbname, "%s.availability_caches", StringValuePtr(database) );
 
         // destroy old records
         bson_init( &obj );
@@ -168,13 +154,46 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         dispose_time_t_array( ary_no_stay );
         dispose_time_t_array( ary_no_arrive );
         dispose_time_t_array( ary_no_checkout );
-        mongo_destroy( conn );
 
         return Qtrue;
 }
 
+static VALUE cacher_alloc( VALUE klass ) {
+        mongo *conn = ALLOC( mongo );
+        VALUE obj;
+        obj = Data_Wrap_Struct( klass, 0, mongo_connection_free, conn );
+        return obj;
+}
+
+static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE password, VALUE database ) {
+        char *c_host     = StringValuePtr( host );
+        char *c_username = StringValuePtr( username );
+        char *c_password = StringValuePtr( password );
+        char *c_database = StringValuePtr( database );
+        int   i_port     = NUM2INT( port );
+
+        mongo *conn;
+        Data_Get_Struct( self, mongo, conn );
+
+        // connect
+        if ( mongo_connect( conn, c_host, i_port ) ) {
+                rb_raise( rb_eException, "failed to connect to %s:%i", c_host, i_port );
+                return Qfalse;
+        }
+
+        // authenticate
+        if ( strlen( c_username ) > 0 ) {
+                if ( mongo_cmd_authenticate( conn, c_database, c_username, c_password ) ) {
+                    rb_raise( rb_eException, "failed to authenticate to %s", c_database );
+                    return Qfalse;
+                }
+        }
+}
+
 void Init_availability_cacher()
 {
-        VALUE m_availability_cacher = rb_define_class( "AvailabilityCacher", rb_cObject );
-        rb_define_singleton_method( m_availability_cacher, "create_cache_from_normalized_dates", create_cache, 5 );
+        VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
+        rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
+        rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 5 );
 }
