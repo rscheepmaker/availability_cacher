@@ -143,6 +143,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
             printf( "date %i\n", *date );
             // valid arrival date?
             if ( !time_t_array_contains( date, ary_no_stay ) && !time_t_array_contains( date, ary_no_arrive ) ) {
+                printf( "into inner loop\n" );
                 for( j = 0; (j < 30) && ((i + j) < ary_dates.length); j++ ) {
                     time_t *next_date  = date + j;
 
