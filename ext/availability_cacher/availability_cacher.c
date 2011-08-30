@@ -77,6 +77,9 @@ static inline void dispose_time_t_array( struct time_t_array array )
         free( array.first );
 }
 
+/**
+ * cleanup the connection if the garbage collector wants us to
+ */
 static void mongo_connection_free( void *p )
 {
         mongo *conn = (mongo *) p;
@@ -170,6 +173,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         return Qtrue;
 }
 
+/**
+ * allocation function. the struct we want to wrap is a mongodb connection.
+ */
 static VALUE cacher_alloc( VALUE klass ) {
         mongo *conn = ALLOC( mongo );
         VALUE obj;
@@ -177,6 +183,9 @@ static VALUE cacher_alloc( VALUE klass ) {
         return obj;
 }
 
+/**
+ * connect to the database.
+ */
 static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE password, VALUE database ) {
         char *c_host     = StringValuePtr( host );
         char *c_username = StringValuePtr( username );
