@@ -132,10 +132,10 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
 
         // iterate over the dates
         time_t * date = ary_dates.first;
-        for( i = 0; i < ary_dates.length; i++, date++ ) {
+        for( i = 0; i < (ary_dates.length); i++, date++ ) {
             // valid arrival date?
             if ( !time_t_array_contains( date, ary_no_stay ) && !time_t_array_contains( date, ary_no_arrive ) ) {
-                for( j = 0; (j < 30) && ((i + j) < ary_dates.length); j++ ) {
+                for( j = 0; (j < 30) && ((i + j) < (ary_dates.length - 1)); j++ ) {
                     time_t *next_date  = date + j;
 
                     // break out the loop if we encounter a day that we cant stay.
@@ -144,15 +144,20 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                     }
 
                     // dont break out the loop but ignore periods ending on days we cant
-                    // leave.
-                    if ( !time_t_array_contains( next_date, ary_no_checkout ) ) {
+                    // leave. we add 1 to the next_date here, because the checkout date is
+                    // actually a day later then the last day this rentable should be
+                    // reserved. so lets say a rentable is reserved on august 2nd, a
+                    // cached entry could be made with arrival_date: august 1st,
+                    // checkout_date: august 2nd, nights: 1. Even though on august 2nd
+                    // this rentable is reserved.
+                    if ( !time_t_array_contains( next_date + 1, ary_no_checkout ) ) {
                         bson *b = &object[num++];
                         bson_init(           b );
                         bson_append_new_oid( b, "_id" );
                         bson_append_time_t(  b, "start_date",  *date );
-                        bson_append_time_t(  b, "end_date",    *next_date );
+                        bson_append_time_t(  b, "end_date",    *(next_date + 1) );
                         bson_append_int(     b, "rentable_id", int_rentable_id );
-                        bson_append_int(     b, "days",        j + 1 );
+                        bson_append_int(     b, "nights",      j + 1 );
                         bson_finish(         b );
                     }
                 }
