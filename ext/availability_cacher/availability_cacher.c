@@ -84,7 +84,7 @@ static void mongo_connection_free( void *p )
 {
         mongo *conn = (mongo *) p;
         mongo_destroy( conn );
-        free( conn );
+        //free( conn );
 }
 
 /**
@@ -220,6 +220,7 @@ void Init_availability_cacher()
 {
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
+        //rb_define_method( cAvailabilityCacher, "initialize_copy", cacher_init_copy, 1 );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
         rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 5 );
 }
