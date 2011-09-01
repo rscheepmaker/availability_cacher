@@ -82,9 +82,10 @@ static inline void dispose_time_t_array( struct time_t_array array )
  */
 static void mongo_connection_free( void *p )
 {
+        printf( "FREE CONNECTION" );
         mongo *conn = (mongo *) p;
         mongo_destroy( conn );
-        //free( conn );
+        free( conn );
 }
 
 /**
