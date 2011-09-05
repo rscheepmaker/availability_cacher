@@ -226,6 +226,7 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
 
 static void reconnect( VALUE self )
 {
+        printf( "database connection broken, reconnecting\n" );
         VALUE host     = rb_iv_get( self, "@host" );
         VALUE port     = rb_iv_get( self, "@port" );
         VALUE username = rb_iv_get( self, "@username" );
