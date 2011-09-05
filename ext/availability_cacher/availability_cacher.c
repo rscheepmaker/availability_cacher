@@ -82,10 +82,8 @@ static inline void dispose_time_t_array( struct time_t_array array )
  */
 static void mongo_connection_free( void *p )
 {
-        printf( "FREE CONNECTION" );
         mongo *conn = (mongo *) p;
         mongo_destroy( conn );
-        //free( conn );
 }
 
 /**
@@ -93,8 +91,6 @@ static void mongo_connection_free( void *p )
  */
 static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates )
 {
-        printf("start_create_cache\n");
-
         // get the connection
         mongo *conn;
         Data_Get_Struct( self, mongo, conn );
@@ -120,15 +116,11 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         char dbname[128];
         sprintf( dbname, "%s.availability_caches", StringValuePtr(database) );
 
-        printf("about to destroy old records\n");
-
         // destroy old records
         bson_init( &obj );
         bson_append_int( &obj, "rentable_id", int_rentable_id );
         bson_finish( &obj );
         mongo_remove( conn, dbname, &obj );
-
-        printf("removed old records\n");
 
         bson object[15000];
         bson *object_p[15000];
@@ -166,7 +158,6 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                         bson_append_int(     b, "rentable_id", int_rentable_id );
                         bson_append_int(     b, "nights",      j + 1 );
                         bson_finish(         b );
-                        printf("num %i", num);
                     }
                 }
             }
@@ -174,21 +165,15 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
 
         mongo_insert_batch( conn, dbname, object_p, num );
 
-        printf("after insert batch\n");
-
         for( i = 0; i < num; i++ ) {
                 bson_destroy( &object[i] );
         }
-
-        printf("after cleanup bson\n");
 
         // fee memory, clear connections
         dispose_time_t_array( ary_dates );
         dispose_time_t_array( ary_no_stay );
         dispose_time_t_array( ary_no_arrive );
         dispose_time_t_array( ary_no_checkout );
-
-        printf("after time_t arrays\n");
 
         return Qtrue;
 }
@@ -222,8 +207,6 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
                 return Qfalse;
         }
 
-        printf("connected\n");
-
         // authenticate
         if ( strlen( c_username ) > 0 ) {
                 if ( mongo_cmd_authenticate( conn, c_database, c_username, c_password ) ) {
@@ -231,15 +214,12 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
                     return Qfalse;
                 }
         }
-
-        printf("authenticated\n");
 }
 
 void Init_availability_cacher()
 {
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
-        //rb_define_method( cAvailabilityCacher, "initialize_copy", cacher_init_copy, 1 );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
         rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 5 );
 }
