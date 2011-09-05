@@ -7,6 +7,8 @@
 
 #define EMPTY_TIME_T_ARRAY(array) ((array).first == 0)
 
+static void reconnect( VALUE self );
+
 /**
  * structure that defines an array of time_ts.
  */
@@ -120,7 +122,10 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         bson_init( &obj );
         bson_append_int( &obj, "rentable_id", int_rentable_id );
         bson_finish( &obj );
-        mongo_remove( conn, dbname, &obj );
+        if (mongo_remove( conn, dbname, &obj ) == MONGO_ERROR) {
+                reconnect( self );
+                mongo_remove( conn, dbname, &obj );
+        }
 
         bson object[15000];
         bson *object_p[15000];
@@ -163,7 +168,10 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
             }
         }
 
-        mongo_insert_batch( conn, dbname, object_p, num );
+        if (mongo_insert_batch( conn, dbname, object_p, num ) == MONGO_ERROR) {
+                reconnect( self );
+                mongo_insert_batch( conn, dbname, object_p, num );
+        }
 
         for( i = 0; i < num; i++ ) {
                 bson_destroy( &object[i] );
@@ -214,6 +222,16 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
                     return Qfalse;
                 }
         }
+}
+
+static void reconnect( VALUE self )
+{
+        VALUE host     = rb_iv_get( self, "@host" );
+        VALUE port     = rb_iv_get( self, "@port" );
+        VALUE username = rb_iv_get( self, "@username" );
+        VALUE password = rb_iv_get( self, "@password" );
+        VALUE database = rb_iv_get( self, "@database" );
+        connect( self, host, port, username, password, database );
 }
 
 void Init_availability_cacher()

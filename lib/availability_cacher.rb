@@ -20,6 +20,10 @@ class AvailabilityCacher
     mongo_connect( result['host'], result['port'], result['username'], result['password'], result['database'] );
 
     @database = result['database']
+    @host     = result['host']
+    @port     = result['port']
+    @username = result['username']
+    @password = result['password']
   end
 
   def create_cache( from, till, options = {} )
