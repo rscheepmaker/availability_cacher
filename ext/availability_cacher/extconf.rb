@@ -9,11 +9,17 @@ Dir.chdir(HERE) do
     puts "mongo-c-driver already built. run 'rake clean' if you need to rebuild."
   else
     cmd = "tar xzf #{BUNDLE} 2>&1"
-    raise "'#{cmd}' failed" unless system(cmd)
+    result = system(cmd)
+    puts result
+    raise "'#{cmd}' failed" unless result
+
+    puts BUNDLE_PATH
 
     Dir.chdir(BUNDLE_PATH) do
       cmd = "scons"
-      raise "'#{cmd}' failed" unless system(cmd)
+      result = system(cmd)
+      puts result
+      raise "'#{cmd}' failed" unless result
     end
   end
 
