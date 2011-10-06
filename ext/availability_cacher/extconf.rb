@@ -22,6 +22,9 @@ Dir.chdir(HERE) do
 
     puts BUNDLE_MONGO_PATH
 
+    cmd = "cp SConstruct #{BUNDLE_MONGO_PATH}"
+    result = %x(cp SConstruct #{BUNDLE_MONGO_PATH})
+
     Dir.chdir(BUNDLE_MONGO_PATH) do
       cmd = "scons"
       result = %x(../scons-2.1.0/install/bin/scons)
