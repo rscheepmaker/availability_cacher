@@ -31,7 +31,7 @@ Dir.chdir(HERE) do
   end
 
   $CFLAGS   = " -DMONGO_HAVE_STDINT"
-  $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a"
+  $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a -fPIC"
 end
 
 if find_header('bson.h', "#{HERE}/mongo-c-driver/src") and
