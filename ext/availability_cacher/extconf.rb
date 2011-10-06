@@ -30,7 +30,7 @@ Dir.chdir(HERE) do
     end
   end
 
-  $CFLAGS   = " -DMONGO_HAVE_STDINT"
+  $CFLAGS   = " -DMONGO_HAVE_STDINT -fPIC"
   $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a -fPIC"
 end
 
