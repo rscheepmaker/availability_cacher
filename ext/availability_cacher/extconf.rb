@@ -21,13 +21,14 @@ Dir.chdir(HERE) do
     run_command "cp SConstruct #{BUNDLE_MONGO_PATH}"
 
     Dir.chdir(BUNDLE_MONGO_PATH) do
-      cmd = "scons"
-      run_command "../scons-2.1.0/install/bin/scons"
+      unless system('scons')
+        run_command "../scons-2.1.0/install/bin/scons"
+      end
     end
   end
 
-  $CFLAGS   = " -DMONGO_HAVE_STDINT"
-  $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a"
+  $CFLAGS   = " -DMONGO_HAVE_STDINT -fPIC"
+  $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a -fPIC"
 end
 
 if find_header('bson.h', "#{HERE}/mongo-c-driver/src") and

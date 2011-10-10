@@ -8,7 +8,7 @@ class AvailabilityCacher
   end
 
   def initialize( ) 
-    options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid.yml' ) ) )
+    options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
     defaults = {
       'host'     => "127.0.0.1",
       'port'     => 27017,
