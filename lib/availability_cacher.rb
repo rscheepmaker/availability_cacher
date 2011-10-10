@@ -21,7 +21,7 @@ class AvailabilityCacher
     uri = ENV['MONGOLAB_URI']
     unless uri.blank?
       uri                = URI.parse(uri)
-      result['host']     = uri.host
+      result['host']     = IPSocket.getaddress(uri.host)
       result['port']     = uri.port
       result['username'] = uri.user
       result['password'] = uri.password
