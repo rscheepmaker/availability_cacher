@@ -17,6 +17,17 @@ class AvailabilityCacher
       'database' => "test"
     }
     result = defaults.merge( options[Rails.env.to_s] )
+
+    uri = ENV['MONGOLAB_URI']
+    unless uri.blank?
+      uri                = URI.parse(uri)
+      result['host']     = uri.host
+      result['port']     = uri.port
+      result['username'] = uri.user
+      result['password'] = uri.password
+      result['database'] = uri.path.gsub('/', '')
+    end
+
     mongo_connect( result['host'], result['port'], result['username'], result['password'], result['database'] );
 
     @database = result['database']
