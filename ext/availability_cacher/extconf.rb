@@ -26,8 +26,8 @@ Dir.chdir(HERE) do
     end
   end
 
-  $CFLAGS   = " -DMONGO_HAVE_STDINT -fPIC"
-  $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a -fPIC"
+  $CFLAGS   = " -DMONGO_HAVE_STDINT"
+  $LDFLAGS  = " #{HERE}/mongo-c-driver/libbson.a #{HERE}/mongo-c-driver/libmongoc.a"
 end
 
 if find_header('bson.h', "#{HERE}/mongo-c-driver/src") and
