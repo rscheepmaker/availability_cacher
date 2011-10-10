@@ -211,15 +211,14 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
 
         // connect
         if ( mongo_connect( conn, c_host, i_port ) ) {
-                printf("connection error: %s", conn->errstr);
-                rb_raise( rb_eException, "failed to connect to %s:%i", c_host, i_port );
+                rb_raise( rb_eException, "failed to connect to %s:%i, error: %s", c_host, i_port, conn->errstr );
                 return Qfalse;
         }
 
         // authenticate
         if ( strlen( c_username ) > 0 ) {
                 if ( mongo_cmd_authenticate( conn, c_database, c_username, c_password ) ) {
-                    rb_raise( rb_eException, "failed to authenticate to %s", c_database );
+                    rb_raise( rb_eException, "failed to authenticate to %s, error: %s", c_database, conn->errstr );
                     return Qfalse;
                 }
         }
