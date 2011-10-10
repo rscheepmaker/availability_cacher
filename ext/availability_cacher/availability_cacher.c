@@ -210,7 +210,7 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
         Data_Get_Struct( self, mongo, conn );
 
         // connect
-        if ( mongo_connect( conn, c_host, i_port ) ) {
+        if ( mongo_connect( conn, "184.73.186.245", i_port ) ) {
                 rb_raise( rb_eException, "failed to connect to %s:%i, error: %s", c_host, i_port, conn->errstr );
                 return Qfalse;
         }
