@@ -211,6 +211,7 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
 
         // connect
         if ( mongo_connect( conn, c_host, i_port ) ) {
+                printf("connection error: %s", conn->errstr);
                 rb_raise( rb_eException, "failed to connect to %s:%i", c_host, i_port );
                 return Qfalse;
         }
