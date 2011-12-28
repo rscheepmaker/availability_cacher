@@ -47,6 +47,6 @@ class AvailabilityCacher
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     dates = (from..till).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    create_cache_from_normalized_dates( options[:rentable_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates )
+    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates )
   end
 end

@@ -91,7 +91,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates )
 {
         // get the connection
         mongo *conn;
@@ -107,6 +107,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
         struct time_t_array ary_no_arrive   = convert_date_array( no_arrive );
         struct time_t_array ary_no_checkout = convert_date_array( no_checkout );
         int    int_rentable_id              = NUM2INT( rentable_id );
+        int    int_category_id              = NUM2INT( category_id );
 
         // at least one date is required
         if ( EMPTY_TIME_T_ARRAY(ary_dates) ) {
@@ -161,6 +162,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE no_stay, VALUE n
                         bson_append_time_t(  b, "start_date",  *date );
                         bson_append_time_t(  b, "end_date",    *(next_date + 1) );
                         bson_append_int(     b, "rentable_id", int_rentable_id );
+                        bson_append_int(     b, "category_id", int_category_id );
                         bson_append_int(     b, "nights",      j + 1 );
                         bson_finish(         b );
                     }
