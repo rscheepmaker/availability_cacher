@@ -242,5 +242,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 5 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 6 );
 }
