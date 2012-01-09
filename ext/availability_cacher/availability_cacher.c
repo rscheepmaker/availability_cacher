@@ -170,14 +170,15 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
                         bson_append_int(     b, "rentable_id", int_rentable_id );
                         bson_append_int(     b, "category_id", int_category_id );
                         bson_append_int(     b, "nights",      j + 1 );
-                        if ( time_t_array_contains( date, arrival_midweek ) && time_t_array_contains( next_date + 1, checkout_midweek ) && j < 7 ) {
+
+                        if ( time_t_array_contains( date, ary_arrival_midweek ) && time_t_array_contains( next_date + 1, ary_checkout_midweek ) && j < 7 ) {
                                 bson_append_string( b, "period_type", "midweek" );
-                        } else if ( time_t_array_contains( date, arrival_weekend ) && time_t_array_contains( next_date + 1, checkout_weekend ) && j < 7 ) {
+                        } else if ( time_t_array_contains( date, ary_arrival_weekend ) && time_t_array_contains( next_date + 1, ary_checkout_weekend ) && j < 7 ) {
                                 bson_append_string( b, "period_type", "weekend" );
-                        } else if ( time_t_array_contains( date, arrival_week ) && time_t_array_contains( next_date + 1, checkout_week ) )
+                        } else if ( time_t_array_contains( date, ary_arrival_week ) && time_t_array_contains( next_date + 1, ary_checkout_week ) ) {
                                 if ( j < 7 ) {
                                         bson_append_string( b, "period_type", "week" );
-                                } else if ( j < 14 ){
+                                } else if ( j < 14 ) {
                                         bson_append_string( b, "period_type", "twoweek" );
                                 } else {
                                         bson_append_string( b, "period_type", "custom" );
@@ -185,6 +186,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
                         } else {
                                 bson_append_string( b, "period_type", "custom" );
                         }
+
                         bson_finish(         b );
                     }
                 }
@@ -205,12 +207,12 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         dispose_time_t_array( ary_no_stay );
         dispose_time_t_array( ary_no_arrive );
         dispose_time_t_array( ary_no_checkout );
-        dispose_time_t_array( arrival_midweek );
-        dispose_time_t_array( arrival_weekend );
-        dispose_time_t_array( arrival_week );
-        dispose_time_t_array( checkout_midweek );
-        dispose_time_t_array( checkout_weekend );
-        dispose_time_t_array( checkout_week );
+        dispose_time_t_array( ary_arrival_midweek );
+        dispose_time_t_array( ary_arrival_weekend );
+        dispose_time_t_array( ary_arrival_week );
+        dispose_time_t_array( ary_checkout_midweek );
+        dispose_time_t_array( ary_checkout_weekend );
+        dispose_time_t_array( ary_checkout_week );
         return Qtrue;
 }
 
