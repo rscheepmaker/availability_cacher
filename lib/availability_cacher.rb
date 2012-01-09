@@ -45,8 +45,14 @@ class AvailabilityCacher
     options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:arrival_midweek].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:arrival_weekend].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:arrival_week].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:checkout_midweek].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:checkout_weekend].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    options[:checkout_week].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     dates = (from..till).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates )
+    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates, options[:arrival_midweek], options[:arrival_weekend], options[:arrival_week], options[:checkout_midweek], options[:checkout_weekend], options[:checkout_week] )
   end
 end

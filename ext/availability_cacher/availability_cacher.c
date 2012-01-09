@@ -91,7 +91,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates, VALUE arrival_midweek, VALUE arrival_weekend, VALUE arrival_week, VALUE checkout_midweek, VALUE checkout_weekend, VALUE checkout_week )
 {
         // get the connection
         mongo *conn;
@@ -102,10 +102,16 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         int   j;
 
         // convert the parameters to appropriate c types
-        struct time_t_array ary_dates       = convert_date_array( dates );
-        struct time_t_array ary_no_stay     = convert_date_array( no_stay );
-        struct time_t_array ary_no_arrive   = convert_date_array( no_arrive );
-        struct time_t_array ary_no_checkout = convert_date_array( no_checkout );
+        struct time_t_array ary_dates            = convert_date_array( dates );
+        struct time_t_array ary_no_stay          = convert_date_array( no_stay );
+        struct time_t_array ary_no_arrive        = convert_date_array( no_arrive );
+        struct time_t_array ary_no_checkout      = convert_date_array( no_checkout );
+        struct time_t_array ary_arrival_midweek  = convert_date_array( arrival_midweek );
+        struct time_t_array ary_arrival_weekend  = convert_date_array( arrival_weekend );
+        struct time_t_array ary_arrival_week     = convert_date_array( arrival_week );
+        struct time_t_array ary_checkout_midweek = convert_date_array( checkout_midweek );
+        struct time_t_array ary_checkout_weekend = convert_date_array( checkout_weekend );
+        struct time_t_array ary_checkout_week    = convert_date_array( checkout_week );
         int    int_rentable_id              = NUM2INT( rentable_id );
         int    int_category_id              = NUM2INT( category_id );
 
@@ -164,6 +170,21 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
                         bson_append_int(     b, "rentable_id", int_rentable_id );
                         bson_append_int(     b, "category_id", int_category_id );
                         bson_append_int(     b, "nights",      j + 1 );
+                        if ( time_t_array_contains( date, arrival_midweek ) && time_t_array_contains( next_date + 1, checkout_midweek ) && j < 7 ) {
+                                bson_append_string( b, "period_type", "midweek" );
+                        } else if ( time_t_array_contains( date, arrival_weekend ) && time_t_array_contains( next_date + 1, checkout_weekend ) && j < 7 ) {
+                                bson_append_string( b, "period_type", "weekend" );
+                        } else if ( time_t_array_contains( date, arrival_week ) && time_t_array_contains( next_date + 1, checkout_week ) )
+                                if ( j < 7 ) {
+                                        bson_append_string( b, "period_type", "week" );
+                                } else if ( j < 14 ){
+                                        bson_append_string( b, "period_type", "twoweek" );
+                                } else {
+                                        bson_append_string( b, "period_type", "custom" );
+                                }
+                        } else {
+                                bson_append_string( b, "period_type", "custom" );
+                        }
                         bson_finish(         b );
                     }
                 }
@@ -184,7 +205,12 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         dispose_time_t_array( ary_no_stay );
         dispose_time_t_array( ary_no_arrive );
         dispose_time_t_array( ary_no_checkout );
-
+        dispose_time_t_array( arrival_midweek );
+        dispose_time_t_array( arrival_weekend );
+        dispose_time_t_array( arrival_week );
+        dispose_time_t_array( checkout_midweek );
+        dispose_time_t_array( checkout_weekend );
+        dispose_time_t_array( checkout_week );
         return Qtrue;
 }
 
@@ -242,5 +268,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 6 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 12 );
 }
