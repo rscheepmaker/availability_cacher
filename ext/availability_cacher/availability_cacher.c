@@ -5,40 +5,156 @@
 #include <time.h>
 #include <ruby.h>
 
+// maximum number of nights in one booking. 30 is a compromise between allowing for booking long
+// periods and keeping the computational complexity low.
+#define MAX_NUMBER_OF_NIGHTS 30
+
 #define EMPTY_TIME_T_ARRAY(array) ((array).first == 0)
 
 static void reconnect( VALUE self );
 
 /**
- * structure that defines an array of time_ts.
+ * structure that defines a single checkout date.
+ */
+struct checkout_date_entry {
+	time_t 	 date;
+	char     desc[16];
+	int	 nights;
+} checkout_date_entry;
+
+/**
+ * structure that defines an array of checkout_date_entries.
  */
 struct time_t_array {
-        time_t *first;
-        int     length;
+        struct checkout_date_entry *first;
+        int            	            length;
 } time_t_array;
 
 /**
- * function that compares two time_ts, used for the POSIX binary search function bsearch.
+ * structure that provides some sort of hash approach for looking up valid checkout dates given a checkin date.
+ */
+struct time_t_index {
+	time_t	     	     date;
+	struct time_t_array *array;
+} time_t_index;
+
+/**
+ * structure that defines an array of time_t_index.
+ */
+struct time_t_index_array {
+	struct time_t_index *first;
+	int          	     length;
+} time_t_index_array;
+
+/**
+ * function that compares two checkout_date_entries, used for the POSIX binary search function bsearch.
  * returns 0 if the dates are equal, a negative number if the first date is smaller, a
  * positive number if the second date is smaller.
  */
 static int compdate( const void *d1, const void *d2 )
 {
-        time_t *date1 = (time_t *) d1;
-        time_t *date2 = (time_t *) d2;
-        return (int)(*date1 - *date2);
+        time_t date1 = ((struct checkout_date_entry *) d1)->date;
+        time_t date2 = ((struct checkout_date_entry *) d2)->date;
+        return (int)(date1 - date2);
 }
 
 /**
- * utility function that checks if the given time_t can be found in the given array.
+ * function that compares two time_t_entries, used for the POSIX binary search function bsearch.
+ * returns 0 if the dates are equal, a negative number if the first date is smaller, a
+ * positive number if the second date is smaller.
  */
-inline static int time_t_array_contains( time_t *t, struct time_t_array array )
+static int compdateindex( const void *di1, const void *di2 )
+{
+	struct time_t_index *index1 = (struct time_t_index *) di1;	
+	struct time_t_index *index2 = (struct time_t_index *) di2;	
+	return (int)(index1->date - index2->date);
+}
+
+/**
+ * utility function that checks if the given date can be found in the given array. returns its
+ * checkout_date_entry if so.
+ */
+inline static struct checkout_date_entry *time_t_array_contains( struct checkout_date_entry *t, struct time_t_array array )
 {
         if (EMPTY_TIME_T_ARRAY( array )) {
                 return 0;
         } else {
-                return (int) bsearch( t, array.first, array.length, sizeof(time_t), compdate );
+                return (struct checkout_date_entry *) bsearch( t, array.first, array.length, sizeof(checkout_date_entry), compdate );
         }
+}
+
+/**
+ * utility function that checks if the given date can has a time_t_array, returns 0 if not, 
+ * returns the time_t_array if so.
+ */
+inline static struct time_t_array * checkout_array_for_checkin_date( struct checkout_date_entry *t, struct time_t_index_array index)
+{
+	void *result = bsearch( t, index.first, index.length, sizeof(struct time_t_index), compdateindex );
+	if (result == 0) {
+		return 0;
+	} else {
+		return ((struct time_t_index *) result)->array;
+	}
+}
+
+/**
+ * recursively checks all possible checkout dates for the given arrival date. pass around an array 
+ * of previous checkout dates to avoid duplicates.
+ * results are stored in the previous_checkout array that is passed around recursively.
+ * the date pointer should point to the current arrival date in an array of dates.
+ */
+static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights)
+{
+	// we can immediately skip this arrival date if it is included in no_stay, or if we're on top of the
+	// recursion tree (nights is 0) and the date is included in no_checkin.
+	if( time_t_array_contains( date, *no_stay ) || (time_t_array_contains( date, *no_checkin ) && nights == 0) ) {
+		return;
+	} else {
+		// obtain the checkout dates for the given checkin date.
+		struct time_t_array *checkout = checkout_array_for_checkin_date( date, *index );
+		if( checkout == 0 ) {
+			return;
+		}
+
+		// iterate over the possible checkout dates.
+		int i = 0;
+		for( i = 0; i < checkout->length; i++ ) {
+			struct checkout_date_entry *checkout_date = checkout->first + i;
+
+			// check whether or not this period contains a no_stay date, by iterating over all the dates
+			// between the arrival date and checkout date, and count the nights for good measure.
+			int nr_nights = 0;
+			int cant_stay = 0;
+			struct checkout_date_entry * current_date = start_date_array;
+			for( nr_nights = 0; current_date->date < checkout_date->date; nr_nights++, current_date++ ) {
+				if( nights + nr_nights > MAX_NUMBER_OF_NIGHTS || time_t_array_contains( current_date, *no_stay ) )
+					cant_stay = 1;
+			}
+			if( cant_stay ) {
+				break;
+			} 
+
+			// if we can checkout this date, and haven't included this date yet in the previous checkouts,
+			// add this date.
+			if( !time_t_array_contains( checkout_date, *no_checkout ) && 
+			    !time_t_array_contains( checkout_date, *previous_checkout ) ) {
+					previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
+					previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
+					// set the description. dont overwrite the description once set.
+					if( nights == 0 ) {
+						strncpy(previous_checkout->first[previous_checkout->length].desc, checkout->first[i].desc, 16);
+					} else {
+						strncpy(previous_checkout->first[previous_checkout->length].desc, "", 16);
+					}
+					previous_checkout->length++;
+					// and recurse...
+					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date + 1, index, nr_nights + nights);
+			} else {
+				// that we can't checkout this date does not mean we should not recurse
+				all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date + 1, index, nr_nights + nights);
+			}
+		}
+	}
 }
 
 /**
@@ -56,7 +172,7 @@ static struct time_t_array convert_date_array( VALUE dates )
                 return array;
         } else {
                 struct time_t_array array;
-                array.first       = ALLOC_N(time_t, RARRAY_LEN( dates ));
+                array.first       = ALLOC_N( struct checkout_date_entry, RARRAY_LEN( tmp ) );
                 array.length      = RARRAY_LEN( tmp );
                 VALUE * date      = RARRAY_PTR( tmp );
                 int i             = 0;
@@ -64,12 +180,62 @@ static struct time_t_array convert_date_array( VALUE dates )
                 ID to_i           = rb_intern("to_i");
 
                 for( i = 0; i < array.length; i++, date++ ) {
-                        time_t time = (time_t) NUM2INT( rb_funcall( *date, to_i, 0 ) );
-                        array.first[i] = time;
+                        time_t time    = (time_t) NUM2INT( rb_funcall( *date, to_i, 0 ) );
+			struct checkout_date_entry entry;
+			entry.date     = time;
+                        array.first[i] = entry;
                 }
                 return array;
         }
 }
+
+/**
+ * convert the arrival checkout hash to an index of time_t_arrays.
+ */
+static struct time_t_index_array convert_arrival_checkout_hash( VALUE hash )
+{
+	VALUE tmp = hash;
+	struct time_t_index_array array;
+
+	ID to_i = rb_intern("to_i");
+	ID keys = rb_intern("keys");
+	
+	VALUE dates  = rb_funcall( tmp, keys, 0 );		
+	array.first  = ALLOC_N(struct time_t_index, RARRAY_LEN( dates ));
+	array.length = RARRAY_LEN( dates );
+	VALUE * date = RARRAY_PTR( dates );
+
+	int i 	     = 0;
+	for( i = 0; i < array.length; i++, date++ ) {
+		time_t time        = (time_t) NUM2INT( rb_funcall( *date, to_i, 0 ) );
+		VALUE result_array = rb_hash_fetch( tmp, *date );
+
+		struct time_t_array *checkout_dates_array;
+		checkout_dates_array	     = ALLOC_N(struct time_t_array, 1);
+		checkout_dates_array->first  = ALLOC_N(struct checkout_date_entry, RARRAY_LEN( result_array ));
+		checkout_dates_array->length = RARRAY_LEN( result_array );
+		VALUE * entry		     = RARRAY_PTR( result_array );
+		array.first[i].array         = checkout_dates_array;
+		array.first[i].date	     = time;
+		int j			     = 0;
+		for( j = 0; j < checkout_dates_array->length; j++, entry++ ) {
+			struct checkout_date_entry date_entry;
+
+			VALUE checkout_date  	  = RARRAY_PTR(*entry)[0];
+			time_t checkout_date_time = (time_t) NUM2INT( rb_funcall( checkout_date, to_i, 0 ) );
+			date_entry.date           = checkout_date_time;
+
+			VALUE desc           	  = RARRAY_PTR(*entry)[1];
+			char *desc_ptr	     	  = RSTRING_PTR(desc);
+			strncpy(date_entry.desc, desc_ptr, 16);
+			
+			checkout_dates_array->first[j] = date_entry;
+		}
+	}
+	return array;
+}
+
+
 
 /**
  * frees the memory of the given time_t_array.
@@ -77,6 +243,15 @@ static struct time_t_array convert_date_array( VALUE dates )
 static inline void dispose_time_t_array( struct time_t_array array )
 {
         free( array.first );
+}
+
+static inline void dispose_time_t_index_array( struct time_t_index_array array )
+{
+	int i = 0;
+	for( i = 0; i < array.length; i++ ) {
+		dispose_time_t_array( *(array.first[i].array) );
+		free( array.first[i].array );
+	}
 }
 
 /**
@@ -91,7 +266,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates, VALUE arrival_midweek, VALUE arrival_weekend, VALUE arrival_week, VALUE checkout_midweek, VALUE checkout_weekend, VALUE checkout_week )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates, VALUE arrival_checkout_hash )
 {
         // get the connection
         mongo *conn;
@@ -106,14 +281,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         struct time_t_array ary_no_stay          = convert_date_array( no_stay );
         struct time_t_array ary_no_arrive        = convert_date_array( no_arrive );
         struct time_t_array ary_no_checkout      = convert_date_array( no_checkout );
-        struct time_t_array ary_arrival_midweek  = convert_date_array( arrival_midweek );
-        struct time_t_array ary_arrival_weekend  = convert_date_array( arrival_weekend );
-        struct time_t_array ary_arrival_week     = convert_date_array( arrival_week );
-        struct time_t_array ary_checkout_midweek = convert_date_array( checkout_midweek );
-        struct time_t_array ary_checkout_weekend = convert_date_array( checkout_weekend );
-        struct time_t_array ary_checkout_week    = convert_date_array( checkout_week );
-        int    int_rentable_id              = NUM2INT( rentable_id );
-        int    int_category_id              = NUM2INT( category_id );
+        struct time_t_index_array ary_index  	 = convert_arrival_checkout_hash( arrival_checkout_hash );
+        int    int_rentable_id                   = NUM2INT( rentable_id );
+        int    int_category_id                   = NUM2INT( category_id );
 
         // at least one date is required
         if ( EMPTY_TIME_T_ARRAY(ary_dates) ) {
@@ -142,55 +312,26 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         int  num = 0;
 
         // iterate over the dates
-        time_t * date = ary_dates.first;
+        struct checkout_date_entry * date = ary_dates.first;
         for( i = 0; i < (ary_dates.length); i++, date++ ) {
-            // valid arrival date?
-            if ( !time_t_array_contains( date, ary_no_stay ) && !time_t_array_contains( date, ary_no_arrive ) ) {
-                for( j = 0; (j < 30) && ((i + j) < (ary_dates.length - 1)); j++ ) {
-                    time_t *next_date  = date + j;
+	    struct time_t_array checkout;
+	    checkout.first  = ALLOC_N(struct checkout_date_entry, 30);
+	    checkout.length = 0;
+	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0 );
 
-                    // break out the loop if we encounter a day that we cant stay.
-                    if ( time_t_array_contains( next_date, ary_no_stay ) ) {
-                            break;
-                    }
-
-                    // dont break out the loop but ignore periods ending on days we cant
-                    // leave. we add 1 to the next_date here, because the checkout date is
-                    // actually a day later then the last day this rentable should be
-                    // reserved. so lets say a rentable is reserved on august 2nd, a
-                    // cached entry could be made with arrival_date: august 1st,
-                    // checkout_date: august 2nd, nights: 1. Even though on august 2nd
-                    // this rentable is reserved.
-                    if ( !time_t_array_contains( next_date + 1, ary_no_checkout ) ) {
-                        bson *b = &object[num++];
-                        bson_init(           b );
-                        bson_append_new_oid( b, "_id" );
-                        bson_append_time_t(  b, "start_date",  *date );
-                        bson_append_time_t(  b, "end_date",    *(next_date + 1) );
-                        bson_append_int(     b, "rentable_id", int_rentable_id );
-                        bson_append_int(     b, "category_id", int_category_id );
-                        bson_append_int(     b, "nights",      j + 1 );
-
-                        if ( time_t_array_contains( date, ary_arrival_midweek ) && time_t_array_contains( next_date + 1, ary_checkout_midweek ) && j < 7 ) {
-                                bson_append_string( b, "period_type", "midweek" );
-                        } else if ( time_t_array_contains( date, ary_arrival_weekend ) && time_t_array_contains( next_date + 1, ary_checkout_weekend ) && j < 7 ) {
-                                bson_append_string( b, "period_type", "weekend" );
-                        } else if ( time_t_array_contains( date, ary_arrival_week ) && time_t_array_contains( next_date + 1, ary_checkout_week ) ) {
-                                if ( j < 7 ) {
-                                        bson_append_string( b, "period_type", "week" );
-                                } else if ( j < 14 ) {
-                                        bson_append_string( b, "period_type", "twoweek" );
-                                } else {
-                                        bson_append_string( b, "period_type", "custom" );
-                                }
-                        } else {
-                                bson_append_string( b, "period_type", "custom" );
-                        }
-
-                        bson_finish(         b );
-                    }
-                }
+            for( j = 0; j < checkout.length; j++ ) {
+		bson *b = &object[num++];
+		bson_init(           b );
+		bson_append_new_oid( b, "_id" );
+		bson_append_time_t(  b, "start_date",  date->date );
+		bson_append_time_t(  b, "end_date",    checkout.first[j].date );
+		bson_append_int(     b, "rentable_id", int_rentable_id );
+		bson_append_int(     b, "category_id", int_category_id );
+		bson_append_int(     b, "nights",      checkout.first[j].nights );
+		bson_append_string(  b, "period_type", checkout.first[j].desc );
+		bson_finish(         b );
             }
+	    dispose_time_t_array( checkout );
         }
 
         if (mongo_insert_batch( conn, dbname, object_p, num ) == MONGO_ERROR) {
@@ -207,12 +348,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         dispose_time_t_array( ary_no_stay );
         dispose_time_t_array( ary_no_arrive );
         dispose_time_t_array( ary_no_checkout );
-        dispose_time_t_array( ary_arrival_midweek );
-        dispose_time_t_array( ary_arrival_weekend );
-        dispose_time_t_array( ary_arrival_week );
-        dispose_time_t_array( ary_checkout_midweek );
-        dispose_time_t_array( ary_checkout_weekend );
-        dispose_time_t_array( ary_checkout_week );
+        dispose_time_t_index_array( ary_index );
         return Qtrue;
 }
 
@@ -270,5 +406,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 12 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 7 );
 }

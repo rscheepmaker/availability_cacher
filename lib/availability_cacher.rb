@@ -1,4 +1,5 @@
 require 'availability_cacher/availability_cacher'
+require 'yaml'
 
 class AvailabilityCacher
   VERSION = '1.1.0'
@@ -38,21 +39,21 @@ class AvailabilityCacher
   end
 
   def create_cache( from, till, options = {} )
-    return false if options[:rentable_id].blank?
+    return false if options[:rentable_id].nil? or options[:rentable_id] == 0
     return false if options[:no_stay].nil?
     return false if options[:no_arrive].nil?
     return false if options[:no_checkout].nil?
     options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    options[:arrival_midweek].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    options[:arrival_weekend].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    options[:arrival_week].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    options[:checkout_midweek].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    options[:checkout_weekend].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    options[:checkout_week].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    dates = (from..till).to_a
+
+    arrival_checkout_hash = {}
+    options[:arrival_checkout_hash].each_pair do |key, value|
+	    arrival_checkout_hash[Time.utc(key.year, key.month, key.mday).localtime] = value.map{|v| [Time.utc(v.first.year, v.first.month, v.first.mday).localtime, v.last]}
+    end
+
+    dates = (from..(till + 1)).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates, options[:arrival_midweek], options[:arrival_weekend], options[:arrival_week], options[:checkout_midweek], options[:checkout_weekend], options[:checkout_week] )
+    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates, arrival_checkout_hash )
   end
 end
