@@ -52,7 +52,7 @@ class AvailabilityCacher
 	    arrival_checkout_hash[Time.utc(key.year, key.month, key.mday).localtime] = value.map{|v| [Time.utc(v.first.year, v.first.month, v.first.mday).localtime, v.last]}
     end
 
-    dates = (from..(till + 1)).to_a
+    dates = (from..(till + 9)).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates, arrival_checkout_hash )
   end
