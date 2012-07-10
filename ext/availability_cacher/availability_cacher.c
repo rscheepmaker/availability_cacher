@@ -2,6 +2,7 @@
 #include "mongo.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <search.h>
 #include <time.h>
 #include <ruby.h>
 
@@ -70,6 +71,7 @@ static int compdateindex( const void *di1, const void *di2 )
 	return (int)(index1->date - index2->date);
 }
 
+
 /**
  * utility function that checks if the given date can be found in the given array. returns its
  * checkout_date_entry if so.
@@ -80,6 +82,19 @@ inline static struct checkout_date_entry *time_t_array_contains( struct checkout
                 return 0;
         } else {
                 return (struct checkout_date_entry *) bsearch( t, array.first, array.length, sizeof(checkout_date_entry), compdate );
+        }
+}
+
+/**
+ * use this one for unsorted arrays, e.g. the previous checkout dates.
+ */
+inline static struct checkout_date_entry *unsorted_time_t_array_contains( struct checkout_date_entry *t, struct time_t_array array )
+{
+        if (EMPTY_TIME_T_ARRAY( array )) {
+                return 0;
+        } else {
+		size_t length = (size_t) array.length;
+                return (struct checkout_date_entry *) lfind( t, array.first, &length, sizeof(checkout_date_entry), compdate );
         }
 }
 
@@ -130,28 +145,26 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 				if( nights + nr_nights > MAX_NUMBER_OF_NIGHTS || time_t_array_contains( current_date, *no_stay ) )
 					cant_stay = 1;
 			}
-			if( cant_stay ) {
-				break;
-			} 
-
-			// if we can checkout this date, and haven't included this date yet in the previous checkouts,
-			// add this date.
-			if( !time_t_array_contains( checkout_date, *no_checkout ) && 
-			    !time_t_array_contains( checkout_date, *previous_checkout ) ) {
-					previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
-					previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
-					// set the description. dont overwrite the description once set.
-					if( nights == 0 ) {
-						strncpy(previous_checkout->first[previous_checkout->length].desc, checkout->first[i].desc, 16);
-					} else {
-						strncpy(previous_checkout->first[previous_checkout->length].desc, "", 16);
-					}
-					previous_checkout->length++;
-					// and recurse...
-					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date + 1, index, nr_nights + nights);
-			} else {
-				// that we can't checkout this date does not mean we should not recurse
-				all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date + 1, index, nr_nights + nights);
+			if( cant_stay != 1 ) {
+				// if we can checkout this date, and haven't included this date yet in the previous checkouts,
+				// add this date.
+				if( !time_t_array_contains( checkout_date, *no_checkout ) && 
+				    !unsorted_time_t_array_contains( checkout_date, *previous_checkout ) ) {
+						previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
+						previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
+						// set the description. dont overwrite the description once set.
+						if( nights == 0 ) {
+							strncpy(previous_checkout->first[previous_checkout->length].desc, checkout->first[i].desc, 16);
+						} else {
+							strncpy(previous_checkout->first[previous_checkout->length].desc, "", 16);
+						}
+						previous_checkout->length++;
+						// and recurse...
+						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights);
+				} else {
+					// that we can't checkout this date does not mean we should not recurse
+					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights);
+				}
 			}
 		}
 	}
@@ -242,7 +255,8 @@ static struct time_t_index_array convert_arrival_checkout_hash( VALUE hash )
  */
 static inline void dispose_time_t_array( struct time_t_array array )
 {
-        free( array.first );
+	if(array.length > 0)
+		free( array.first );
 }
 
 static inline void dispose_time_t_index_array( struct time_t_index_array array )
@@ -315,12 +329,12 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         struct checkout_date_entry * date = ary_dates.first;
         for( i = 0; i < (ary_dates.length); i++, date++ ) {
 	    struct time_t_array checkout;
-	    checkout.first  = ALLOC_N(struct checkout_date_entry, 30);
+	    checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
 	    checkout.length = 0;
 	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0 );
 
             for( j = 0; j < checkout.length; j++ ) {
-		bson *b = &object[num++];
+		bson *b = object_p[num++];
 		bson_init(           b );
 		bson_append_new_oid( b, "_id" );
 		bson_append_time_t(  b, "start_date",  date->date );
@@ -331,7 +345,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 		bson_append_string(  b, "period_type", checkout.first[j].desc );
 		bson_finish(         b );
             }
-	    dispose_time_t_array( checkout );
+	    free( checkout.first );
         }
 
         if (mongo_insert_batch( conn, dbname, object_p, num ) == MONGO_ERROR) {
