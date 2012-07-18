@@ -11,6 +11,7 @@ class TestAvailabilityCacher < Test::Unit::TestCase
 					    no_checkout: [ Date.civil(2012, 7, 7), Date.civil(2012,7,13) ], 
 					    rentable_id: 1,
 					    category_id: 1,
+					    tags: %w( dogs cats dinner ),
 					    arrival_checkout_hash:
 			{ Date.civil(2012,7,1) => [ [Date.civil(2012,7,5), ''], [Date.civil(2012,7,6), ''] ], 
 			  Date.civil(2012,7,4) => [ [Date.civil(2012,7,5), ''], [Date.civil(2012,7,7), ''], [Date.civil(2012,7,8), ''], [Date.civil(2012,7,9) ] ], 

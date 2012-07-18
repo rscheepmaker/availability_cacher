@@ -280,7 +280,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates, VALUE arrival_checkout_hash )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
 {
         // get the connection
         mongo *conn;
@@ -298,6 +298,8 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         struct time_t_index_array ary_index  	 = convert_arrival_checkout_hash( arrival_checkout_hash );
         int    int_rentable_id                   = NUM2INT( rentable_id );
         int    int_category_id                   = NUM2INT( category_id );
+	VALUE *ary_tags				 = RARRAY_PTR( tags );
+	int    int_tags_length			 = RARRAY_LEN( tags );
 
         // at least one date is required
         if ( EMPTY_TIME_T_ARRAY(ary_dates) ) {
@@ -342,6 +344,16 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 		bson_append_int(     b, "rentable_id", int_rentable_id );
 		bson_append_int(     b, "category_id", int_category_id );
 		bson_append_int(     b, "nights",      checkout.first[j].nights );
+
+		bson_append_start_array( b, "tags" );
+		int k;
+		char index[16];
+		for( k = 0; k < int_tags_length; k++ ) {
+		    sprintf( index, "%i", k );
+		    bson_append_string( b, index, StringValuePtr(ary_tags[k]) );
+		}
+		bson_append_finish_array( b );
+
 		bson_append_string(  b, "period_type", checkout.first[j].desc );
 		bson_finish(         b );
             }
@@ -420,5 +432,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 7 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 8 );
 }
