@@ -118,7 +118,7 @@ inline static struct time_t_array * checkout_array_for_checkin_date( struct chec
  * results are stored in the previous_checkout array that is passed around recursively.
  * the date pointer should point to the current arrival date in an array of dates.
  */
-static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights)
+static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights, char *prev_desc)
 {
 	// we can immediately skip this arrival date if it is included in no_stay, or if we're on top of the
 	// recursion tree (nights is 0) and the date is included in no_checkin.
@@ -158,7 +158,7 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 						if( nights == 0 ) {
 							strncpy(desc, checkout->first[i].desc, 16);
 						} else {
-							if (strncmp(desc, "week", 16) == 0 && strncmp(checkout->first[i].desc, "week", 16) == 0) {
+							if (strncmp(prev_desc, "week", 16) == 0 && strncmp(checkout->first[i].desc, "week", 16) == 0) {
 								if ( (nr_nights + nights) > 7 && (nr_nights + nights) < 16 )
 									strncpy(desc, "twoweek", 16);
 								else if ( (nr_nights + nights) > 15 && (nr_nights + nights) < 23 )
@@ -171,10 +171,12 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 						}
 						previous_checkout->length++;
 						// and recurse...
-						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights);
+						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc);
 				} else {
+					char desc[16];
+					strncpy(desc, checkout->first[i].desc, 16);
 					// that we can't checkout this date does not mean we should not recurse
-					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights);
+					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc);
 				}
 			}
 		}
@@ -344,7 +346,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    struct time_t_array checkout;
 	    checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
 	    checkout.length = 0;
-	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0 );
+	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "" );
 
             for( j = 0; j < checkout.length; j++ ) {
 		bson *b = object_p[num++];

@@ -19,6 +19,6 @@ class TestAvailabilityCacher < Test::Unit::TestCase
 			  Date.civil(2012,7,7) => [ [Date.civil(2012,7,9), ''], [Date.civil(2012,7,10), ''] ],
 			  Date.civil(2012,7,8) => [ [Date.civil(2012,7,10), ''] ],
 			  Date.civil(2012,7,9) => [ [Date.civil(2012,7,11), ''] ],
-   			  Date.civil(2012,7,13) => [ [Date.civil(2012,7,14), ''], [Date.civil(2012,7,15), 'awesome' ], [Date.civil(2012,8,15), ''] ] } )
+   			  Date.civil(2012,7,13) => [ [Date.civil(2012,7,14), ''], [Date.civil(2012,7,15), 'awesome' ], [Date.civil(2012,8,15), ''], [Date.civil(2012,7,20), 'week'] ] } )
   end
 end

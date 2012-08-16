@@ -18,6 +18,7 @@ class AvailabilityCacher
       'database' => "test"
     }
     result = defaults.merge( options[Rails.env.to_s] )
+    #result = defaults
 
     uri = ENV['MONGOLAB_URI']
     unless uri.blank?
