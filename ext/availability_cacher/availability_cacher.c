@@ -152,11 +152,22 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 				    !unsorted_time_t_array_contains( checkout_date, *previous_checkout ) ) {
 						previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
 						previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
+
+						char *desc = previous_checkout->first[previous_checkout->length].desc;
 						// set the description. dont overwrite the description once set.
 						if( nights == 0 ) {
-							strncpy(previous_checkout->first[previous_checkout->length].desc, checkout->first[i].desc, 16);
+							strncpy(desc, checkout->first[i].desc, 16);
 						} else {
-							strncpy(previous_checkout->first[previous_checkout->length].desc, "", 16);
+							if (strncmp(desc, "week", 16) && strncmp(checkout->first[i].desc, "week", 16)) {
+								if ( (nr_nights + nights) > 7 && (nr_nights + nights) < 16 )
+									strncpy(desc, "twoweek", 16);
+								else if ( (nr_nights + nights) > 15 && (nr_nights + nights) < 23 )
+									strncpy(desc, "threeweek", 16);
+								else
+									strncpy(desc, "", 16);
+							} else {
+								strncpy(desc, "", 16);
+							}
 						}
 						previous_checkout->length++;
 						// and recurse...
