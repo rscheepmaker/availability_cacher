@@ -158,25 +158,21 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 						if( nights == 0 ) {
 							strncpy(desc, checkout->first[i].desc, 16);
 						} else {
-							if (strncmp(prev_desc, "week", 16) == 0 && strncmp(checkout->first[i].desc, "week", 16) == 0) {
-								if ( (nr_nights + nights) > 7 && (nr_nights + nights) < 16 )
-									strncpy(desc, "twoweek", 16);
-								else if ( (nr_nights + nights) > 15 && (nr_nights + nights) < 23 )
-									strncpy(desc, "threeweek", 16);
-								else
-									strncpy(desc, "", 16);
-							} else {
+							if (strncmp(prev_desc, "week", 16) == 0 && strncmp(checkout->first[i].desc, "week", 16) == 0)
+								strncpy(desc, "twoweek", 16);
+							else if (strncmp(prev_desc, "twoweek", 16) == 0 && strncmp(checkout->first[i].desc, "week", 16) == 0)
+								strncpy(desc, "threeweek", 16);
+							else
 								strncpy(desc, "", 16);
-							}
 						}
 						previous_checkout->length++;
 						// and recurse...
-						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc);
+						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc );
 				} else {
 					char desc[16];
 					strncpy(desc, checkout->first[i].desc, 16);
 					// that we can't checkout this date does not mean we should not recurse
-					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc);
+					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc );
 				}
 			}
 		}
