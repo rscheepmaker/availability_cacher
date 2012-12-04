@@ -165,7 +165,7 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 							else
 								strncpy(desc, "", 16);
 						}
-						if (strncmp(prev_desc, "", 16) == 0) {
+						if (strncmp(desc, "", 16) == 0) {
 							if (nr_nights + nights == 7)
 								strncpy(desc, "week", 16);
 							else if (nr_nights + nights == 14)
