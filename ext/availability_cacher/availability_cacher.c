@@ -289,7 +289,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
 {
         // get the connection
         mongo *conn;
@@ -307,6 +307,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         struct time_t_index_array ary_index  	 = convert_arrival_checkout_hash( arrival_checkout_hash );
         int    int_rentable_id                   = NUM2INT( rentable_id );
         int    int_category_id                   = NUM2INT( category_id );
+	int    int_park_id			 = NUM2INT( park_id );
 	VALUE *ary_tags				 = RARRAY_PTR( tags );
 	int    int_tags_length			 = RARRAY_LEN( tags );
 
@@ -352,6 +353,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 		bson_append_time_t(  b, "end_date",    checkout.first[j].date );
 		bson_append_int(     b, "rentable_id", int_rentable_id );
 		bson_append_int(     b, "category_id", int_category_id );
+		bson_append_int(     b, "park_id",     int_park_id );
 		bson_append_int(     b, "nights",      checkout.first[j].nights );
 
 		bson_append_start_array( b, "tags" );
@@ -441,5 +443,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 8 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 9 );
 }

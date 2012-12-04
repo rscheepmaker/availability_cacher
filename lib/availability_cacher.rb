@@ -2,14 +2,14 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.1.8'
+  VERSION = '1.1.13'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
   end
 
   def initialize( ) 
-    options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
+    #options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
     defaults = {
       'host'     => "127.0.0.1",
       'port'     => 27017,
@@ -17,18 +17,18 @@ class AvailabilityCacher
       'password' => "",
       'database' => "test"
     }
-    result = defaults.merge( options[Rails.env.to_s] )
-    #result = defaults
+    #result = defaults.merge( options[Rails.env.to_s] )
+    result = defaults
 
-    uri = ENV['MONGOLAB_URI']
-    unless uri.blank?
-      uri                = URI.parse(uri)
-      result['host']     = IPSocket.getaddress(uri.host)
-      result['port']     = uri.port
-      result['username'] = uri.user
-      result['password'] = uri.password
-      result['database'] = uri.path.gsub('/', '')
-    end
+    #uri = ENV['MONGOLAB_URI']
+    #unless uri.blank?
+      #uri                = URI.parse(uri)
+      #result['host']     = IPSocket.getaddress(uri.host)
+      #result['port']     = uri.port
+      #result['username'] = uri.user
+      #result['password'] = uri.password
+      #result['database'] = uri.path.gsub('/', '')
+    #end
 
     mongo_connect( result['host'], result['port'], result['username'], result['password'], result['database'] );
 
@@ -44,6 +44,7 @@ class AvailabilityCacher
     return false if options[:no_stay].nil?
     return false if options[:no_arrive].nil?
     return false if options[:no_checkout].nil?
+    return false if options[:park_id].nil?
     options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
@@ -56,6 +57,6 @@ class AvailabilityCacher
 
     dates = (from..(till + 9)).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], dates, arrival_checkout_hash, tags )
+    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], options[:park_id], dates, arrival_checkout_hash, tags )
   end
 end
