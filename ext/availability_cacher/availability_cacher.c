@@ -298,7 +298,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE rentable_type, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
 {
         // get the connection
         mongo *conn;
@@ -364,6 +364,10 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 		bson_append_int(     b, "category_id", int_category_id );
 		bson_append_int(     b, "park_id",     int_park_id );
 		bson_append_int(     b, "nights",      checkout.first[j].nights );
+
+		char ary_rentable_type[16];
+		strncpy( ary_rentable_type, RSTRING_PTR(rentable_type), 16);
+		bson_append_string(  b, "rentable_type", ary_rentable_type );
 
 		bson_append_start_array( b, "tags" );
 		int k;
@@ -452,5 +456,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 9 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 10 );
 }

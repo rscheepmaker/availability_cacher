@@ -12,6 +12,7 @@ class TestAvailabilityCacher < Test::Unit::TestCase
 					    rentable_id: 1,
 					    category_id: 1,
 					    park_id: 1,
+					    rentable_type: 'bungalow',
 					    tags: %w( dogs cats dinner ),
 					    arrival_checkout_hash:
 			{ Date.civil(2012,7,1) => [ [Date.civil(2012,7,5), ''], [Date.civil(2012,7,6), ''] ], 
