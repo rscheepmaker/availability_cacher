@@ -2,14 +2,14 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.1.13'
+  VERSION = '1.1.14'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
   end
 
   def initialize( ) 
-    #options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
+    options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
     defaults = {
       'host'     => "127.0.0.1",
       'port'     => 27017,
@@ -17,18 +17,18 @@ class AvailabilityCacher
       'password' => "",
       'database' => "test"
     }
-    #result = defaults.merge( options[Rails.env.to_s] )
+    result = defaults.merge( options[Rails.env.to_s] )
     result = defaults
 
-    #uri = ENV['MONGOLAB_URI']
-    #unless uri.blank?
-      #uri                = URI.parse(uri)
-      #result['host']     = IPSocket.getaddress(uri.host)
-      #result['port']     = uri.port
-      #result['username'] = uri.user
-      #result['password'] = uri.password
-      #result['database'] = uri.path.gsub('/', '')
-    #end
+    uri = ENV['MONGOLAB_URI']
+    unless uri.blank?
+      uri                = URI.parse(uri)
+      result['host']     = IPSocket.getaddress(uri.host)
+      result['port']     = uri.port
+      result['username'] = uri.user
+      result['password'] = uri.password
+      result['database'] = uri.path.gsub('/', '')
+    end
 
     mongo_connect( result['host'], result['port'], result['username'], result['password'], result['database'] );
 

@@ -165,6 +165,15 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 							else
 								strncpy(desc, "", 16);
 						}
+						if (strncmp(prev_desc, "", 16) == 0) {
+							if (nr_nights + nights == 7)
+								strncpy(desc, "week", 16);
+							else if (nr_nights + nights == 14)
+								strncpy(desc, "twoweek", 16);
+							else if (nr_nights + nights == 21)
+								strncpy(desc, "threeweek", 16);
+						}
+
 						previous_checkout->length++;
 						// and recurse...
 						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc );
