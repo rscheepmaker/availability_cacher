@@ -118,7 +118,7 @@ inline static struct time_t_array * checkout_array_for_checkin_date( struct chec
  * results are stored in the previous_checkout array that is passed around recursively.
  * the date pointer should point to the current arrival date in an array of dates.
  */
-static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights, char *prev_desc)
+static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights, char *prev_desc, int minimum_number_of_nights)
 {
 	// we can immediately skip this arrival date if it is included in no_stay, or if we're on top of the
 	// recursion tree (nights is 0) and the date is included in no_checkin.
@@ -149,7 +149,8 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 				// if we can checkout this date, and haven't included this date yet in the previous checkouts,
 				// add this date.
 				if( !time_t_array_contains( checkout_date, *no_checkout ) && 
-				    !unsorted_time_t_array_contains( checkout_date, *previous_checkout ) ) {
+				    !unsorted_time_t_array_contains( checkout_date, *previous_checkout ) &&
+				    nr_nights + nights >= minimum_number_of_nights ) {
 						previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
 						previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
 
@@ -176,12 +177,12 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 
 						previous_checkout->length++;
 						// and recurse...
-						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc );
+						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc, minimum_number_of_nights );
 				} else {
 					char desc[16];
 					strncpy(desc, checkout->first[i].desc, 16);
 					// that we can't checkout this date does not mean we should not recurse
-					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc );
+					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc, minimum_number_of_nights );
 				}
 			}
 		}
@@ -298,7 +299,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE rentable_type, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE rentable_type, VALUE minimum_number_of_nights, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
 {
         // get the connection
         mongo *conn;
@@ -316,6 +317,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         struct time_t_index_array ary_index  	 = convert_arrival_checkout_hash( arrival_checkout_hash );
         int    int_rentable_id                   = NUM2INT( rentable_id );
         int    int_category_id                   = NUM2INT( category_id );
+	int    int_minimum_number_of_nights	 = NUM2INT( minimum_number_of_nights );
 	int    int_park_id			 = NUM2INT( park_id );
 	VALUE *ary_tags				 = RARRAY_PTR( tags );
 	int    int_tags_length			 = RARRAY_LEN( tags );
@@ -352,7 +354,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    struct time_t_array checkout;
 	    checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
 	    checkout.length = 0;
-	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "" );
+	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", minimum_number_of_nights );
 
             for( j = 0; j < checkout.length; j++ ) {
 		bson *b = object_p[num++];
@@ -456,5 +458,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 10 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 11 );
 }

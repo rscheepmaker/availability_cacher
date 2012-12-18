@@ -2,7 +2,7 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.1.16'
+  VERSION = '1.1.17'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
@@ -58,6 +58,6 @@ class AvailabilityCacher
 
     dates = (from..(till + 9)).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], options[:park_id], options[:rentable_type], dates, arrival_checkout_hash, tags )
+    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], options[:park_id], options[:rentable_type], options[:minimum_number_of_nights], dates, arrival_checkout_hash, tags )
   end
 end
