@@ -2,7 +2,7 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.1.17'
+  VERSION = '1.1.18'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
@@ -46,6 +46,7 @@ class AvailabilityCacher
     return false if options[:no_checkout].nil?
     return false if options[:park_id].nil?
     return false if options[:rentable_type].nil?
+    options[:minimum_number_of_nights] = options[:minimum_number_of_nights] || 1
     options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }

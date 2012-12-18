@@ -150,7 +150,7 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 				// add this date.
 				if( !time_t_array_contains( checkout_date, *no_checkout ) && 
 				    !unsorted_time_t_array_contains( checkout_date, *previous_checkout ) &&
-				    nr_nights + nights >= minimum_number_of_nights ) {
+				    ((nr_nights + nights) >= minimum_number_of_nights) ) {
 						previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
 						previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
 
