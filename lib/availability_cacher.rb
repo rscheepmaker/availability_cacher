@@ -2,7 +2,7 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.1.18'
+  VERSION = '1.1.19'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new

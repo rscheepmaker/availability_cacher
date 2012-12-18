@@ -354,7 +354,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    struct time_t_array checkout;
 	    checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
 	    checkout.length = 0;
-	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", minimum_number_of_nights );
+	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights );
 
             for( j = 0; j < checkout.length; j++ ) {
 		bson *b = object_p[num++];
