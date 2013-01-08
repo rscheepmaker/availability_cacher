@@ -336,9 +336,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         bson_init( &obj );
         bson_append_int( &obj, "rentable_id", int_rentable_id );
         bson_finish( &obj );
-        if (mongo_remove( conn, dbname, &obj ) == MONGO_ERROR) {
+        if (mongo_remove( conn, dbname, &obj, 0 ) == MONGO_ERROR) {
                 reconnect( self );
-                mongo_remove( conn, dbname, &obj );
+                mongo_remove( conn, dbname, &obj, 0 );
         }
 
         bson object[15000];
@@ -386,9 +386,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    free( checkout.first );
         }
 
-        if (mongo_insert_batch( conn, dbname, object_p, num ) == MONGO_ERROR) {
+        if (mongo_insert_batch( conn, dbname, object_p, num, 0, 0 ) == MONGO_ERROR) {
                 reconnect( self );
-                mongo_insert_batch( conn, dbname, object_p, num );
+                mongo_insert_batch( conn, dbname, object_p, num, 0, MONGO_CONTINUE_ON_ERROR );
         }
 
         for( i = 0; i < num; i++ ) {

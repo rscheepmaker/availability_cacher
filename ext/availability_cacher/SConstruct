@@ -1,6 +1,9 @@
 # -*- mode: python; -*-
 
-VERSION = "0.4"
+MAJOR_VERSION = "0"
+MINOR_VERSION = "7"
+PATCH_VERSION = "1"
+VERSION = MAJOR_VERSION + "." + MINOR_VERSION + "." + PATCH_VERSION
 
 # --- options ----
 AddOption('--test-server',
@@ -25,27 +28,50 @@ AddOption('--c99',
           action='store_true',
           help='Compile with c99 (recommended for gcc)')
 
+AddOption('--m32',
+          dest='use_m32',
+          default=False,
+          action='store_true',
+          help='Compile with m32 (required for 32 bit applications on 64 bit machines)')
+
+AddOption('--addrinfo',
+          dest='use_addrinfo',
+          default=False,
+          action='store_true',
+          help='Compile with addrinfo to make use of internet address info when connecting')
+
 AddOption('--d',
           dest='optimize',
           default=True,
           action='store_false',
           help='disable optimizations')
 
-AddOption('--use-platform',
-          dest='compile_platform',
-          default='GENERIC',
-          type='string',
-          nargs=1,
+AddOption('--standard-env',
+          dest='standard_env',
+          default=False,
+          action='store_true',
+          help='Set this option if you want to use basic, platform-agnostic networking.')
+
+AddOption('--install-library-path',
+          dest='install_library_path',
+          default='/usr/local/lib',
           action='store',
-          help='Compile for a specific platform to take advantage '
-               ' of particular system features. For the moment, this include timeouts only.'
-               ' Current options include LINUX, '
-               ' GENERIC, and CUSTOM. If you specific CUSTOM, you must place a'
-               ' system-specific implementation of net.h and net.c in src/platform/custom/')
+          help='The shared library install path. Defaults to /usr/local/lib.')
+
+AddOption('--install-include-path',
+          dest='install_include_path',
+          default='/usr/local/include',
+          action='store',
+          help='The header install path. Defaults to /usr/local/include.')
 
 import os, sys
 
-env = Environment( ENV=os.environ )
+if GetOption('use_m32'):
+    msvs_arch = "x86"
+else:
+    msvs_arch = "amd64"
+print "Compiling for " + msvs_arch
+env = Environment(ENV=os.environ, MSVS_ARCH=msvs_arch, TARGET_ARCH=msvs_arch)
 
 #  ---- Docs ----
 def build_docs(env, target, source):
@@ -59,21 +85,21 @@ env.Alias("docs", [], [build_docs])
 env.AlwaysBuild("docs")
 
 # ---- Platforms ----
-PLATFORM_TEST_DIR = None
-if "LINUX" == GetOption('compile_platform'):
-    env.Append( CPPFLAGS=" -D_MONGO_USE_LINUX_SYSTEM" )
-    NET_LIB = "src/platform/linux/net.c"
-    PLATFORM_TEST_DIR = "test/platform/linux/"
-    PLATFORM_TESTS = [ "timeouts" ]
-elif "CUSTOM" == GetOption('compile_platform'):
-    env.Append( CPPFLAGS=" -D_MONGO_USE_CUSTOM_SYSTEM" )
-    NET_LIB = "src/platform/custom/net.c"
-else:
-    NET_LIB = "src/net.c"
+PLATFORM_TESTS = []
+NET_LIB = "src/env.c"
+if GetOption('standard_env'):
+    env.Append( CPPFLAGS=" -D_POSIX_SOURCE" )
+elif os.sys.platform in ["darwin", "linux2"]:
+    PLATFORM_TESTS = [ "env_posix", "unix_socket" ]
+elif 'win32' == os.sys.platform:
+    PLATFORM_TESTS = [ "env_win32" ]
+
 
 # ---- Libraries ----
 if os.sys.platform in ["darwin", "linux2"]:
-    env.Append( CPPFLAGS=" -pedantic -Wall -ggdb -DMONGO_HAVE_STDINT -fPIC " )
+    env.Append( CPPFLAGS="-pedantic -Wall -ggdb -DMONGO_HAVE_STDINT -fPIC" )
+    if not GetOption('standard_env'):
+        env.Append( CPPFLAGS=" -D_POSIX_SOURCE -D_DARWIN_C_SOURCE" )
     env.Append( CPPPATH=["/opt/local/include/"] )
     env.Append( LIBPATH=["/opt/local/lib/"] )
 
@@ -114,29 +140,118 @@ if conf.CheckLib('json'):
     have_libjson = True
 env = conf.Finish()
 
+if GetOption('use_m32'):
+    if 'win32' != os.sys.platform:
+        env.Append( CPPFLAGS=" -m32" )
+        env.Append( SHLINKFLAGS=" -m32" )
+
+if GetOption('use_addrinfo'):
+    env.Append( CPPFLAGS=" -D_MONGO_USE_GETADDRINFO" )
+
 if sys.byteorder == 'big':
     env.Append( CPPDEFINES="MONGO_BIG_ENDIAN" )
 
 env.Append( CPPPATH=["src/"] )
 
+env.Append( CPPFLAGS=" -DMONGO_DLL_BUILD" )
 coreFiles = ["src/md5.c" ]
 mFiles = [ "src/mongo.c", NET_LIB, "src/gridfs.c"]
-bFiles = [ "src/bson.c", "src/numbers.c", "src/encoding.c"]
+bFiles = [ "src/bcon.c", "src/bson.c", "src/numbers.c", "src/encoding.c"]
+
+mHeaders = ["src/mongo.h"]
+bHeaders = ["src/bson.h"]
+headers = mHeaders + bHeaders
+
 mLibFiles = coreFiles + mFiles + bFiles
 bLibFiles = coreFiles + bFiles
+
 m = env.Library( "mongoc" ,  mLibFiles )
 b = env.Library( "bson" , bLibFiles  )
 env.Default( env.Alias( "lib" , [ m[0] , b[0] ] ) )
 
+# build the objects explicitly so that shared targets use the same
+# environment (otherwise scons complains)
+mSharedObjs = env.SharedObject(mLibFiles)
+bSharedObjs = env.SharedObject(bLibFiles)
+
+bsonEnv = env.Clone()
 if os.sys.platform == "linux2":
-    env.Append( SHLINKFLAGS="-shared -Wl,-soname,libmongoc.so." + VERSION )
-    env.Append( SHLINKFLAGS = "-shared -Wl,-soname,libbson.so." + VERSION )
+    env.Append( SHLINKFLAGS = "-shared -Wl,-soname,libmongoc.so." + MAJOR_VERSION + "." + MINOR_VERSION )
+    bsonEnv.Append( SHLINKFLAGS = "-shared -Wl,-soname,libbson.so." + MAJOR_VERSION + "." + MINOR_VERSION)
+    dynm = env.SharedLibrary( "mongoc" , mSharedObjs )
+    dynb = bsonEnv.SharedLibrary( "bson" , bSharedObjs )
+else:
+    dynm = env.SharedLibrary( "mongoc" , mSharedObjs )
+    dynb = env.SharedLibrary( "bson" , bSharedObjs )
 
-dynm = env.SharedLibrary( "mongoc" , mLibFiles )
-dynb = env.SharedLibrary( "bson" , bLibFiles )
+# ---- Install ----
+if os.sys.platform == "darwin":
+    shared_obj_suffix = "dylib"
+else:
+    shared_obj_suffix = "so"
+
+install_library_path = env.GetOption("install_library_path")
+install_include_path = env.GetOption("install_include_path")
+def remove_without_exception(filename):
+    try:
+        os.remove(filename)
+    except:
+        print "Could not find " + filename + ". Skipping removal."
+
+def makedirs_without_exception(path):
+  try:
+    os.makedirs(path)
+  except:
+    print path + ": already exists, skipping"
+
+mongoc_target = os.path.join(install_library_path, "libmongoc." + shared_obj_suffix)
+mongoc_major_target = mongoc_target + "." + MAJOR_VERSION
+mongoc_minor_target = mongoc_major_target + "." + MINOR_VERSION
+mongoc_patch_target = mongoc_minor_target + "." + PATCH_VERSION
+
+bson_target = os.path.join(install_library_path, "libbson." + shared_obj_suffix)
+bson_major_target = bson_target + "." + MAJOR_VERSION
+bson_minor_target = bson_major_target + "." + MINOR_VERSION
+bson_patch_target = bson_minor_target + "." + PATCH_VERSION
+
+def uninstall_shared_libraries(target=None, source=None, env=None):
+  remove_without_exception(mongoc_major_target)
+  remove_without_exception(mongoc_minor_target)
+  remove_without_exception(mongoc_patch_target)
+  remove_without_exception(mongoc_target)
+
+  remove_without_exception(bson_major_target)
+  remove_without_exception(bson_minor_target)
+  remove_without_exception(bson_patch_target)
+  remove_without_exception(bson_target)
+
+def install_shared_libraries(target=None, source=None, env=None):
+  import shutil
+  uninstall_shared_libraries()
+
+  makedirs_without_exception(install_library_path)
+  shutil.copy("libmongoc." + shared_obj_suffix, mongoc_patch_target)
+  os.symlink(mongoc_patch_target, mongoc_minor_target)
+  os.symlink(mongoc_minor_target, mongoc_target)
+
+  shutil.copy("libbson." + shared_obj_suffix, bson_patch_target)
+  os.symlink(bson_patch_target, bson_minor_target)
+  os.symlink(bson_minor_target, bson_target)
+
+def install_headers(target=None, source=None, env=None):
+  import shutil
+  # -- uninstall headers here?
+  
+  makedirs_without_exception(install_include_path)
+  for hdr in headers:
+    shutil.copy(hdr, install_include_path)
+
+env.Alias("install", [], [install_shared_libraries, install_headers] )
+
+env.Command("uninstall", [], uninstall_shared_libraries)
+
 env.Default( env.Alias( "sharedlib" , [ dynm[0] , dynb[0] ] ) )
-
-
+env.AlwaysBuild("install")
 
 # ---- Benchmarking ----
 benchmarkEnv = env.Clone()
@@ -150,23 +265,20 @@ benchmarkEnv.Program( "benchmark" ,  [ "test/benchmark.c"] )
 testEnv = benchmarkEnv.Clone()
 testCoreFiles = [ ]
 
-def run_tests( root, tests ):
+def run_tests( root, tests, env, alias ):
     for name in tests:
-        filename = "%s/%s.c" % (root, name)
+        filename = "%s/%s_test.c" % (root, name)
         exe = "test_" + name
-        test = testEnv.Program( exe , testCoreFiles + [filename]  )
-        test_alias = testEnv.Alias('test', [test], test[0].abspath + ' 2> ' + os.path.devnull)
+        test = env.Program( exe , testCoreFiles + [filename]  )
+        test_alias = env.Alias(alias, [test], test[0].abspath + ' 2> ' + os.path.devnull)
         AlwaysBuild(test_alias)
 
-tests = Split("sizes resize endian_swap bson bson_subobject simple update errors "
-"count_delete auth gridfs validate examples helpers oid functions cursors replica_set")
+tests = Split("write_concern commands sizes resize endian_swap bson bson_subobject bcon simple update errors "
+"count_delete auth gridfs validate examples helpers oid functions cursors")
+tests += PLATFORM_TESTS
 
 # Run standard tests
-run_tests("test", tests)
-
-# Run platform tests
-if not PLATFORM_TEST_DIR is None:
-    run_tests( PLATFORM_TEST_DIR, PLATFORM_TESTS )
+run_tests("test", tests, testEnv, "test")
 
 if have_libjson:
     tests.append('json')
@@ -176,3 +288,8 @@ if have_libjson:
 test = testEnv.Program( 'test_cpp' , testCoreFiles + ['test/cpptest.cpp']  )
 test_alias = testEnv.Alias('test', [test], test[0].abspath + ' 2> '+ os.path.devnull)
 AlwaysBuild(test_alias)
+
+# Run replica set test only
+repl_testEnv = benchmarkEnv.Clone()
+repl_tests = ["replica_set", "replset"]
+run_tests("test", repl_tests, repl_testEnv, "repl_test")

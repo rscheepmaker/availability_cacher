@@ -2,7 +2,7 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.1.19'
+  VERSION = '1.2.0'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
@@ -18,7 +18,6 @@ class AvailabilityCacher
       'database' => "test"
     }
     result = defaults.merge( options[Rails.env.to_s] )
-    #result = defaults
 
     uri = ENV['MONGOLAB_URI']
     unless uri.blank?
