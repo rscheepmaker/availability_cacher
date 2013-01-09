@@ -20,6 +20,7 @@ static void reconnect( VALUE self );
 struct checkout_date_entry {
 	time_t 	 date;
 	char     desc[16];
+	long int price;
 	int	 nights;
 } checkout_date_entry;
 
@@ -118,7 +119,7 @@ inline static struct time_t_array * checkout_array_for_checkin_date( struct chec
  * results are stored in the previous_checkout array that is passed around recursively.
  * the date pointer should point to the current arrival date in an array of dates.
  */
-static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights, char *prev_desc, int minimum_number_of_nights)
+static void all_checkout_array_for_checkin_date( struct checkout_date_entry *date, struct time_t_array *previous_checkout, struct time_t_array *no_stay, struct time_t_array *no_checkout, struct time_t_array *no_checkin, struct checkout_date_entry *start_date_array, struct time_t_index_array *index, int nights, char *prev_desc, int minimum_number_of_nights, int prev_price)
 {
 	// we can immediately skip this arrival date if it is included in no_stay, or if we're on top of the
 	// recursion tree (nights is 0) and the date is included in no_checkin.
@@ -148,11 +149,13 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 			if( cant_stay != 1 ) {
 				// if we can checkout this date, and haven't included this date yet in the previous checkouts,
 				// add this date.
+				long int new_price = prev_price + checkout_date->price;
 				if( !time_t_array_contains( checkout_date, *no_checkout ) && 
 				    !unsorted_time_t_array_contains( checkout_date, *previous_checkout ) &&
 				    ((nr_nights + nights) >= minimum_number_of_nights) ) {
 						previous_checkout->first[previous_checkout->length].date   = checkout_date->date;
 						previous_checkout->first[previous_checkout->length].nights = nr_nights + nights;
+						previous_checkout->first[previous_checkout->length].price = new_price;
 
 						char *desc = previous_checkout->first[previous_checkout->length].desc;
 						// set the description. dont overwrite the description once set.
@@ -177,12 +180,12 @@ static void all_checkout_array_for_checkin_date( struct checkout_date_entry *dat
 
 						previous_checkout->length++;
 						// and recurse...
-						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc, minimum_number_of_nights );
+						all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc, minimum_number_of_nights, new_price );
 				} else {
 					char desc[16];
 					strncpy(desc, checkout->first[i].desc, 16);
 					// that we can't checkout this date does not mean we should not recurse
-					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc, minimum_number_of_nights );
+					all_checkout_array_for_checkin_date( checkout_date, previous_checkout, no_stay, no_checkout, no_checkin, current_date, index, nr_nights + nights, desc, minimum_number_of_nights, new_price );
 				}
 			}
 		}
@@ -260,6 +263,10 @@ static struct time_t_index_array convert_arrival_checkout_hash( VALUE hash )
 			VALUE desc           	  = RARRAY_PTR(*entry)[1];
 			char *desc_ptr	     	  = RSTRING_PTR(desc);
 			strncpy(date_entry.desc, desc_ptr, 16);
+
+			VALUE price		  = RARRAY_PTR(*entry)[2];
+			long int int_price	  = (long int) NUM2INT(price);
+			date_entry.price	  = int_price;
 			
 			checkout_dates_array->first[j] = date_entry;
 		}
@@ -354,7 +361,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    struct time_t_array checkout;
 	    checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
 	    checkout.length = 0;
-	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights );
+	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights, 0 );
 
             for( j = 0; j < checkout.length; j++ ) {
 		bson *b = object_p[num++];
@@ -366,6 +373,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 		bson_append_int(     b, "category_id", int_category_id );
 		bson_append_int(     b, "park_id",     int_park_id );
 		bson_append_int(     b, "nights",      checkout.first[j].nights );
+		bson_append_long(    b, "price",       checkout.first[j].price );
 
 		char ary_rentable_type[16];
 		strncpy( ary_rentable_type, RSTRING_PTR(rentable_type), 16);

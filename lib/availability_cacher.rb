@@ -2,14 +2,13 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.2.0'
+  VERSION = '1.3.0'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
   end
 
   def initialize( ) 
-    options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
     defaults = {
       'host'     => "127.0.0.1",
       'port'     => 27017,
@@ -17,16 +16,24 @@ class AvailabilityCacher
       'password' => "",
       'database' => "test"
     }
-    result = defaults.merge( options[Rails.env.to_s] )
 
-    uri = ENV['MONGOLAB_URI']
-    unless uri.blank?
-      uri                = URI.parse(uri)
-      result['host']     = IPSocket.getaddress(uri.host)
-      result['port']     = uri.port
-      result['username'] = uri.user
-      result['password'] = uri.password
-      result['database'] = uri.path.gsub('/', '')
+    uri = ENV['MONGO_URI']
+    if uri and (uri != '')
+      uri                  = URI.parse(uri)
+      result['host']     ||= uri.host
+      result['port']     ||= uri.port
+      result['username'] ||= uri.user
+      result['password'] ||= uri.password
+      result['database'] ||= uri.path.gsub('/', '')
+    elsif defined?(Rails)
+      options = YAML::load( File.open( File.join( Rails.root, 'config', 'mongoid_cacher.yml' ) ) )
+      result = defaults.merge( options[Rails.env.to_s] )
+    else
+      result = defaults
+    end
+
+    if defined?(IPSocket)
+	result['host'] = IPSocket.getaddress(result['host'].to_s)
     end
 
     mongo_connect( result['host'], result['port'], result['username'], result['password'], result['database'] );
@@ -53,7 +60,7 @@ class AvailabilityCacher
 
     arrival_checkout_hash = {}
     options[:arrival_checkout_hash].each_pair do |key, value|
-	    arrival_checkout_hash[Time.utc(key.year, key.month, key.mday).localtime] = value.map{|v| [Time.utc(v.first.year, v.first.month, v.first.mday).localtime, v.last]}
+	arrival_checkout_hash[Time.utc(key.year, key.month, key.mday).localtime] = value.map{|v| [Time.utc(v.first.year, v.first.month, v.first.mday).localtime, v[1], v[2]]}
     end
 
     dates = (from..(till + 9)).to_a
