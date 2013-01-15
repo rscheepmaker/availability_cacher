@@ -2,7 +2,7 @@ require 'availability_cacher/availability_cacher'
 require 'yaml'
 
 class AvailabilityCacher
-  VERSION = '1.3.0'
+  VERSION = '1.3.1'
 
   def self.cacher
     @@cacher ||= AvailabilityCacher.new
@@ -20,6 +20,7 @@ class AvailabilityCacher
     uri = ENV['MONGO_URI']
     if uri and (uri != '')
       uri                  = URI.parse(uri)
+      result = defaults
       result['host']     ||= uri.host
       result['port']     ||= uri.port
       result['username'] ||= uri.user
