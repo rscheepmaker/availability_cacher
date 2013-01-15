@@ -20,7 +20,7 @@ class AvailabilityCacher
     uri = ENV['MONGO_URI']
     if uri and (uri != '')
       uri                  = URI.parse(uri)
-      result = defaults
+      result = {}
       result['host']     ||= uri.host
       result['port']     ||= uri.port
       result['username'] ||= uri.user
