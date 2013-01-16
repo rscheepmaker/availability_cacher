@@ -348,9 +348,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
                 mongo_remove( conn, dbname, &obj, 0 );
         }
 
-        bson object[15000];
-        bson *object_p[15000];
-        for( i = 0; i < 15000; i++ ) {
+        bson object[16000];
+        bson *object_p[16000];
+        for( i = 0; i < 16000; i++ ) {
                 object_p[i] = &object[i];
         }
         int  num = 0;
