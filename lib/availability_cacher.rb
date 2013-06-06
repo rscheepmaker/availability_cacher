@@ -57,6 +57,7 @@ class AvailabilityCacher
     options[:no_stay].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_arrive].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
     options[:no_checkout].map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
+    skip_category_cache = options[:skip_category_cache] ? 1 : 0
     tags = options[:tags] || []
 
     arrival_checkout_hash = {}
@@ -66,6 +67,6 @@ class AvailabilityCacher
 
     dates = (from..(till + 9)).to_a
     dates.map! { |d| Time.utc( d.year, d.month, d.mday ).localtime }
-    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], options[:park_id], options[:rentable_type], options[:minimum_number_of_nights], dates, arrival_checkout_hash, tags )
+    create_cache_from_normalized_dates( options[:rentable_id], options[:category_id], options[:no_stay], options[:no_arrive], options[:no_checkout], options[:park_id], options[:rentable_type], options[:minimum_number_of_nights], dates, arrival_checkout_hash, tags, skip_category_cache )
   end
 end

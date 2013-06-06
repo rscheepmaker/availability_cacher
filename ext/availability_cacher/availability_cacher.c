@@ -307,7 +307,7 @@ static void mongo_connection_free( void *p )
 /**
  * the actual heave lifting.
  */
-static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE rentable_type, VALUE minimum_number_of_nights, VALUE dates, VALUE arrival_checkout_hash, VALUE tags )
+static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VALUE no_stay, VALUE no_arrive, VALUE no_checkout, VALUE park_id, VALUE rentable_type, VALUE minimum_number_of_nights, VALUE dates, VALUE arrival_checkout_hash, VALUE tags, VALUE skip_category_cache )
 {
         // get the connection
         mongo *conn;
@@ -412,30 +412,32 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 
         bson   out;
         bson   map_reduce;
+        char   collection_name[128];
 
-        char collection_name[128];
-        sprintf( collection_name, "category_cache_for_%i", int_category_id );
+        if ( NUM2INT(skip_category_cache) != 1 ) {
+          sprintf( collection_name, "category_cache_for_%i", int_category_id );
 
-		    bson_init( &map_reduce );
-        bson_append_string(       &map_reduce, "mapReduce", "availability_caches" );
-        bson_append_code(         &map_reduce, "map", "function() { emit( this.category_uniqueness_key, this ); }" );
-        bson_append_code(         &map_reduce, "reduce", "function(key, values) { return values[0]; }" );
-        bson_append_string(       &map_reduce, "out", collection_name );
-        bson_append_bool(         &map_reduce, "jsMode", 1 );
-
-        bson_append_start_object( &map_reduce, "query" );
-        bson_append_int( &map_reduce, "category_id", int_category_id );
-        bson_append_finish_object(&map_reduce );
-
-        bson_append_start_object( &map_reduce, "sort" );
-        bson_append_int( &map_reduce, "category_uniqueness_key", 1 );
-        bson_append_finish_object(&map_reduce );
-        bson_finish(              &map_reduce );
-
-        mongo_run_command( conn, StringValuePtr(database), &map_reduce, &out );
-
-        bson_destroy( &map_reduce );
-        bson_destroy( &out );
+		      bson_init( &map_reduce );
+          bson_append_string(       &map_reduce, "mapReduce", "availability_caches" );
+          bson_append_code(         &map_reduce, "map", "function() { emit( this.category_uniqueness_key, this ); }" );
+          bson_append_code(         &map_reduce, "reduce", "function(key, values) { return values[0]; }" );
+          bson_append_string(       &map_reduce, "out", collection_name );
+          bson_append_bool(         &map_reduce, "jsMode", 1 );
+  
+          bson_append_start_object( &map_reduce, "query" );
+          bson_append_int( &map_reduce, "category_id", int_category_id );
+          bson_append_finish_object(&map_reduce );
+  
+          bson_append_start_object( &map_reduce, "sort" );
+          bson_append_int( &map_reduce, "category_uniqueness_key", 1 );
+          bson_append_finish_object(&map_reduce );
+          bson_finish(              &map_reduce );
+  
+          mongo_run_command( conn, StringValuePtr(database), &map_reduce, &out );
+  
+          bson_destroy( &map_reduce );
+          bson_destroy( &out );
+        }
         
         // fee memory, clear connections
         dispose_time_t_array( ary_dates );
@@ -501,5 +503,5 @@ void Init_availability_cacher()
         VALUE cAvailabilityCacher = rb_define_class( "AvailabilityCacher", rb_cObject );
         rb_define_alloc_func( cAvailabilityCacher, cacher_alloc );
         rb_define_method( cAvailabilityCacher, "mongo_connect", connect, 5 );
-        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 11 );
+        rb_define_method( cAvailabilityCacher, "create_cache_from_normalized_dates", create_cache, 12 );
 }
