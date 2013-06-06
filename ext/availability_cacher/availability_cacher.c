@@ -431,7 +431,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         bson_append_finish_object(&map_reduce );
         bson_finish(              &map_reduce );
 
-        mongo_run_command( conn, StringValuePtr(database), &map_reduce, &out )
+        mongo_run_command( conn, StringValuePtr(database), &map_reduce, &out );
 
         bson_destroy( &map_reduce );
         bson_destroy( &out );
