@@ -355,6 +355,8 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         }
         int  num = 0;
 
+        char category_uniqueness_key[128];
+
         // iterate over the dates
         struct checkout_date_entry * date = ary_dates.first;
         for( i = 0; i < (ary_dates.length); i++, date++ ) {
@@ -363,7 +365,6 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    checkout.length = 0;
 	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights, 0 );
 
-      char category_uniqueness_key[128];
 
             for( j = 0; j < checkout.length; j++ ) {
 		bson *b = object_p[num++];
