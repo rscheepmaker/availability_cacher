@@ -313,7 +313,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         mongo *conn;
         Data_Get_Struct( self, mongo, conn );
 
-        mongo_write_concern *write_concern;
+        mongo_write_concern write_concern[1];
         mongo_write_concern_init( write_concern );
         write_concern->w = 1;
         mongo_write_concern_finish( write_concern );
