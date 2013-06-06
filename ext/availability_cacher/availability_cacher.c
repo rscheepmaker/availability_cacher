@@ -313,6 +313,12 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         mongo *conn;
         Data_Get_Struct( self, mongo, conn );
 
+        mongo_write_concern write_concern;
+        mongo_write_concern_init( &write_concern );
+        write_concern->w = 1;
+        mongo_write_concern_finish( &write_concern );
+        mongo_set_write_concern( conn, &write_concern );
+
         bson  obj;
         int   i;
         int   j;
@@ -445,6 +451,7 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         dispose_time_t_array( ary_no_arrive );
         dispose_time_t_array( ary_no_checkout );
         dispose_time_t_index_array( ary_index );
+        mongo_write_concern_destroy( write_concern );
 
         return Qtrue;
 }
@@ -473,7 +480,7 @@ static VALUE connect( VALUE self, VALUE host, VALUE port, VALUE username, VALUE 
         Data_Get_Struct( self, mongo, conn );
 
         // connect
-        if ( mongo_connect( conn, c_host, i_port ) ) {
+        if ( mongo_client( conn, c_host, i_port ) ) {
                 rb_raise( rb_eException, "failed to connect to %s:%i, error: %s, %s", c_host, i_port, conn->errstr, conn->lasterrstr );
                 return Qfalse;
         }
