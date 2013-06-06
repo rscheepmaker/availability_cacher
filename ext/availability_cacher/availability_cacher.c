@@ -363,6 +363,8 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	    checkout.length = 0;
 	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights, 0 );
 
+      char category_uniqueness_key[128];
+
             for( j = 0; j < checkout.length; j++ ) {
 		bson *b = object_p[num++];
 		bson_init(           b );
@@ -373,7 +375,9 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 		bson_append_int(     b, "category_id", int_category_id );
 		bson_append_int(     b, "park_id",     int_park_id );
 		bson_append_int(     b, "nights",      checkout.first[j].nights );
-		bson_append_long(    b, "price",       checkout.first[j].price );
+
+    sprintf( category_uniqueness_key, "%i-%i-%i", int_category_id, date->date, checkout.first[j].date );
+		bson_append_string(  b, "category_uniqueness_key", category_uniqueness_key );
 
 		char ary_rentable_type[16];
 		strncpy( ary_rentable_type, RSTRING_PTR(rentable_type), 16);

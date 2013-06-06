@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{availability_cacher}
-  s.version = "1.3.2"
+  s.version = "1.3.3"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Rob Scheepmaker"]
-  s.date = %q{2013-01-16}
+  s.date = %q{2013-06-06}
   s.default_executable = %q{availability_cacher}
   s.description = %q{Allows quick generating of records in mongodb.}
   s.email = ["rob@ikdoe.nl"]
