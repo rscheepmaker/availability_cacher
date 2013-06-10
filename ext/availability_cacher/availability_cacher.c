@@ -407,9 +407,11 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
 	              free( checkout.first );
             }
 
-            if (mongo_insert_batch( conn, dbname, object_p, num, 0, 0 ) == MONGO_ERROR) {
-                reconnect( self );
-                mongo_insert_batch( conn, dbname, object_p, num, 0, MONGO_CONTINUE_ON_ERROR );
+            if ( num > 0 ) {
+                if (mongo_insert_batch( conn, dbname, object_p, num, 0, 0 ) == MONGO_ERROR) {
+                    reconnect( self );
+                    mongo_insert_batch( conn, dbname, object_p, num, 0, MONGO_CONTINUE_ON_ERROR );
+                }
             }
 
             for( i = 0; i < num; i++ ) {
