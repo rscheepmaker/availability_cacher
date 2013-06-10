@@ -328,17 +328,17 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         struct time_t_array ary_no_stay          = convert_date_array( no_stay );
         struct time_t_array ary_no_arrive        = convert_date_array( no_arrive );
         struct time_t_array ary_no_checkout      = convert_date_array( no_checkout );
-        struct time_t_index_array ary_index  	 = convert_arrival_checkout_hash( arrival_checkout_hash );
+        struct time_t_index_array ary_index  	   = convert_arrival_checkout_hash( arrival_checkout_hash );
         int    int_rentable_id                   = NUM2INT( rentable_id );
         int    int_category_id                   = NUM2INT( category_id );
-	int    int_minimum_number_of_nights	 = NUM2INT( minimum_number_of_nights );
-	int    int_park_id			 = NUM2INT( park_id );
-	VALUE *ary_tags				 = RARRAY_PTR( tags );
-	int    int_tags_length			 = RARRAY_LEN( tags );
+        int    int_minimum_number_of_nights	     = NUM2INT( minimum_number_of_nights );
+      	int    int_park_id			                 = NUM2INT( park_id );
+	      VALUE *ary_tags				                   = RARRAY_PTR( tags );
+	      int    int_tags_length			             = RARRAY_LEN( tags );
 
         // at least one date is required
         if ( EMPTY_TIME_T_ARRAY(ary_dates) ) {
-                return Qfalse;
+            return Qfalse;
         }
 
         // TODO: we might want to do a bounds check here...
@@ -351,69 +351,70 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         bson_append_int( &obj, "rentable_id", int_rentable_id );
         bson_finish( &obj );
         if (mongo_remove( conn, dbname, &obj, 0 ) == MONGO_ERROR) {
-                reconnect( self );
-                mongo_remove( conn, dbname, &obj, 0 );
+            reconnect( self );
+            mongo_remove( conn, dbname, &obj, 0 );
         }
 
         bson object[16000];
         bson *object_p[16000];
         for( i = 0; i < 16000; i++ ) {
-                object_p[i] = &object[i];
+            object_p[i] = &object[i];
         }
         int  num = 0;
 
         char category_uniqueness_key[128];
 
-        // iterate over the dates
-        struct checkout_date_entry * date = ary_dates.first;
-        for( i = 0; i < (ary_dates.length); i++, date++ ) {
-	    struct time_t_array checkout;
-	    checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
-	    checkout.length = 0;
-	    all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights, 0 );
+        if (ary_dates.length > 0) {
+            // iterate over the dates
+            struct checkout_date_entry * date = ary_dates.first;
+            for( i = 0; i < (ary_dates.length); i++, date++ ) {
+	              struct time_t_array checkout;
+	              checkout.first  = ALLOC_N(struct checkout_date_entry, 31);
+	              checkout.length = 0;
+	              all_checkout_array_for_checkin_date( date, &checkout, &ary_no_stay, &ary_no_checkout, &ary_no_arrive, date, &ary_index, 0, "", int_minimum_number_of_nights, 0 );
 
-
-            for( j = 0; j < checkout.length; j++ ) {
-		bson *b = object_p[num++];
-		bson_init(           b );
-		bson_append_new_oid( b, "_id" );
-		bson_append_time_t(  b, "start_date",  date->date );
-		bson_append_time_t(  b, "end_date",    checkout.first[j].date );
-		bson_append_int(     b, "rentable_id", int_rentable_id );
-		bson_append_int(     b, "category_id", int_category_id );
-		bson_append_int(     b, "park_id",     int_park_id );
-		bson_append_int(     b, "nights",      checkout.first[j].nights );
-    bson_append_long(    b, "price",       checkout.first[j].price );
-
-    sprintf( category_uniqueness_key, "%i-%i-%i", int_category_id, date->date, checkout.first[j].date );
-		bson_append_string(  b, "category_uniqueness_key", category_uniqueness_key );
-
-		char ary_rentable_type[16];
-		strncpy( ary_rentable_type, RSTRING_PTR(rentable_type), 16);
-		bson_append_string(  b, "rentable_type", ary_rentable_type );
-
-		bson_append_start_array( b, "tags" );
-		int k;
-		char index[16];
-		for( k = 0; k < int_tags_length; k++ ) {
-		    sprintf( index, "%i", k );
-		    bson_append_string( b, index, StringValuePtr(ary_tags[k]) );
-		}
-		bson_append_finish_array( b );
-
-		bson_append_string(  b, "period_type", checkout.first[j].desc );
-		bson_finish(         b );
+                for( j = 0; j < checkout.length; j++ ) {
+		                bson *b = object_p[num++];
+		                bson_init(           b );
+		                bson_append_new_oid( b, "_id" );
+		                bson_append_time_t(  b, "start_date",  date->date );
+		                bson_append_time_t(  b, "end_date",    checkout.first[j].date );
+		                bson_append_int(     b, "rentable_id", int_rentable_id );
+		                bson_append_int(     b, "category_id", int_category_id );
+		                bson_append_int(     b, "park_id",     int_park_id );
+		                bson_append_int(     b, "nights",      checkout.first[j].nights );
+                    bson_append_long(    b, "price",       checkout.first[j].price );
+    
+                    sprintf( category_uniqueness_key, "%i-%i-%i", int_category_id, date->date, checkout.first[j].date );
+		                bson_append_string(  b, "category_uniqueness_key", category_uniqueness_key );
+                
+		                char ary_rentable_type[16];
+		                strncpy( ary_rentable_type, RSTRING_PTR(rentable_type), 16);
+		                bson_append_string(  b, "rentable_type", ary_rentable_type );
+                
+		                bson_append_start_array( b, "tags" );
+		                int k;
+		                char index[16];
+		                for( k = 0; k < int_tags_length; k++ ) {
+		                    sprintf( index, "%i", k );
+		                    bson_append_string( b, index, StringValuePtr(ary_tags[k]) );
+		                }
+		                bson_append_finish_array( b );
+                
+		                bson_append_string(  b, "period_type", checkout.first[j].desc );
+		                bson_finish(         b );
+                }
+	              free( checkout.first );
             }
-	    free( checkout.first );
-        }
 
-        if (mongo_insert_batch( conn, dbname, object_p, num, 0, 0 ) == MONGO_ERROR) {
+            if (mongo_insert_batch( conn, dbname, object_p, num, 0, 0 ) == MONGO_ERROR) {
                 reconnect( self );
                 mongo_insert_batch( conn, dbname, object_p, num, 0, MONGO_CONTINUE_ON_ERROR );
-        }
+            }
 
-        for( i = 0; i < num; i++ ) {
+            for( i = 0; i < num; i++ ) {
                 bson_destroy( &object[i] );
+            }
         }
 
         bson   out;
@@ -421,28 +422,26 @@ static VALUE create_cache( VALUE self, VALUE rentable_id, VALUE category_id, VAL
         char   collection_name[128];
 
         if ( NUM2INT(skip_category_cache) != 1 ) {
-          sprintf( collection_name, "category_cache_for_%i", int_category_id );
+            sprintf( collection_name, "category_cache_for_%i", int_category_id );
 
-		      bson_init( &map_reduce );
-          bson_append_string(       &map_reduce, "mapReduce", "availability_caches" );
-          bson_append_code(         &map_reduce, "map", "function() { emit( this.category_uniqueness_key, this ); }" );
-          bson_append_code(         &map_reduce, "reduce", "function(key, values) { return values[0]; }" );
-          bson_append_string(       &map_reduce, "out", collection_name );
-          bson_append_bool(         &map_reduce, "jsMode", 1 );
+		        bson_init( &map_reduce );
+            bson_append_string(       &map_reduce, "mapReduce", "availability_caches" );
+            bson_append_code(         &map_reduce, "map", "function() { emit( this.category_uniqueness_key, this ); }" );
+            bson_append_code(         &map_reduce, "reduce", "function(key, values) { return values[0]; }" );
+            bson_append_string(       &map_reduce, "out", collection_name );
+            bson_append_bool(         &map_reduce, "jsMode", 1 );
   
-          bson_append_start_object( &map_reduce, "query" );
-          bson_append_int( &map_reduce, "category_id", int_category_id );
-          bson_append_finish_object(&map_reduce );
+            bson_append_start_object( &map_reduce, "query" );
+            bson_append_int( &map_reduce, "category_id", int_category_id );
+            bson_append_finish_object(&map_reduce );
+    
+            bson_append_start_object( &map_reduce, "sort" );
+            bson_append_int(          &map_reduce, "category_uniqueness_key", 1 );
+            bson_append_finish_object(&map_reduce );
+            bson_finish(              &map_reduce );
   
-          bson_append_start_object( &map_reduce, "sort" );
-          bson_append_int( &map_reduce, "category_uniqueness_key", 1 );
-          bson_append_finish_object(&map_reduce );
-          bson_finish(              &map_reduce );
-  
-          mongo_run_command( conn, StringValuePtr(database), &map_reduce, &out );
-  
-          bson_destroy( &map_reduce );
-          bson_destroy( &out );
+            mongo_run_command( conn, StringValuePtr(database), &map_reduce, &out );
+            bson_destroy( &map_reduce );
         }
         
         // fee memory, clear connections
